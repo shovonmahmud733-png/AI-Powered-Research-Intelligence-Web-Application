@@ -80,44 +80,52 @@ class OfflineAcademicEngine implements LLMProvider {
     // Generate grounded synthesis
     let synthesis = '';
     const qLower = (req.userQuery || req.prompt).toLowerCase();
+    const paperTitle = req.paperMetadata?.title || 'the indexed paper';
 
-    if (qLower.includes('limitation') || qLower.includes('future') || qLower.includes('bottleneck')) {
+    if (qLower.includes('limitation') || qLower.includes('limit') || qLower.includes('drawback') || qLower.includes('bottleneck')) {
       const limChunks = chunks.filter(
         (c) =>
           c.chunk.sectionName.toLowerCase().includes('limit') ||
-          c.chunk.content.toLowerCase().includes('limitation')
+          c.chunk.content.toLowerCase().includes('limitation') ||
+          c.chunk.content.toLowerCase().includes('constraint') ||
+          c.chunk.content.toLowerCase().includes('future work')
       );
       const targetList = limChunks.length > 0 ? limChunks : [primaryChunk];
-      synthesis = `Across the papers currently stored in this project, key recurring limitations appear in the documented literature:\n\n${targetList
+      synthesis = `Based on the empirical documentation in **${paperTitle}**, the following core limitations are reported:\n\n${targetList
         .map(
           (c, i) =>
-            `${i + 1}. **${c.chunk.sectionName}** (Page ${c.chunk.pageNumber}):\n   > "${c.chunk.content.substring(0, 260)}..."`
+            `${i + 1}. **${c.chunk.sectionName}** (Page ${c.chunk.pageNumber}):\n   > "${c.chunk.content.substring(0, 320)}..."`
         )
-        .join('\n\n')}\n\n**AI Methodological Interpretation**: These constraints demonstrate that dialectal morphology and Romanized Banglish phonetics remain open research challenges for low-resource NLP.`;
+        .join('\n\n')}\n\n**AI Methodological Note**: These limitations represent author-identified constraints regarding dataset scale, evaluation boundaries, or modeling assumptions. Review the source drawer below for complete contextual passages.`;
     } else if (qLower.includes('compare') || qLower.includes('versus') || qLower.includes('vs')) {
-      const distinctPapers = Array.from(new Set(chunks.map((c) => c.chunk.paperId)));
-      synthesis = `A comparative analysis across the retrieved literature reveals significant trade-offs in model architecture and preprocessing:\n\n${chunks
+      synthesis = `A comparative analysis across the retrieved literature reveals significant trade-offs in methodology and empirical outcomes:\n\n${chunks
         .slice(0, 3)
         .map(
           (c) =>
-            `• **${c.chunk.sectionName}** (Page ${c.chunk.pageNumber}): "${c.chunk.content.substring(0, 240)}..."`
+            `• **${c.chunk.sectionName}** (Page ${c.chunk.pageNumber}): "${c.chunk.content.substring(0, 260)}..."`
         )
-        .join('\n\n')}\n\n**Synthesis Matrix**:\n- **XLM-R**: Benefits from cross-lingual subword regularizations on dialectal text.\n- **BanglaBERT**: Exhibits superior token efficiency on standardized native script but degrades on phonetically ambiguous Romanization.\n\n*Note: Neither baseline achieves uniform superiority; preprocessing normalization accounts for empirical variances.*`;
+        .join('\n\n')}\n\n**Synthesis**: The reported results indicate experimental trade-offs between architectural complexity and domain-specific preprocessing. Neither approach achieves absolute dominance across all evaluation metrics.`;
     } else if (qLower.includes('disagree') || qLower.includes('contradict') || qLower.includes('conflict')) {
-      synthesis = `The documented disagreement between the studies centers on whether multilingual scale outperforms monolingual domain-specialized pretraining:\n\n1. **Multilingual Baseline Claim** (Page 8, Results & Evaluation):\n   XLM-R achieved 84.1% Macro-F1 with subword regularization.\n2. **Monolingual Counterclaim** (Page 7, Results & Discussion):\n   BanglaBERT attained 81.3% Macro-F1, outperforming vanilla XLM-R (79.2%) under standard phonetic normalization.\n\n**Theoretical Root Cause**: Difference in vocabulary overlap and tokenization granularity on dialect-specific morpho-syntax.`;
+      synthesis = `The documented disagreement across the studies highlights empirical variances under differing experimental conditions:\n\n${chunks
+        .slice(0, 2)
+        .map(
+          (c, i) =>
+            `${i + 1}. **Documented Finding ${i + 1}** (${c.chunk.sectionName}, Page ${c.chunk.pageNumber}):\n   > "${c.chunk.content.substring(0, 260)}..."`
+        )
+        .join('\n\n')}\n\n**Methodological Root Cause**: Discrepancies commonly arise from differences in benchmark datasets, evaluation metrics, and hyperparameter calibrations.`;
     } else if (qLower.includes('evidence') || qLower.includes('verify') || qLower.includes('claim')) {
-      synthesis = `Grounded evidence verification from the project library:\n\n> "${primaryChunk.chunk.content.substring(0, 300)}..."\n\n**Evidence Grounding**:\n- **Source Section**: ${primaryChunk.chunk.sectionName}\n- **Page Number**: ${primaryChunk.chunk.pageNumber}\n- **Confidence**: High (${Math.round(primaryChunk.score * 100)}% semantic retrieval match)\n- **Verification Status**: Empirically documented in peer-reviewed study.`;
+      synthesis = `Grounded evidence verification from the project library:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\n**Evidence Grounding**:\n- **Source Section**: ${primaryChunk.chunk.sectionName}\n- **Page Number**: ${primaryChunk.chunk.pageNumber}\n- **Confidence**: High (${Math.round(primaryChunk.score * 100)}% retrieval confidence)\n- **Verification Status**: Empirically documented in published manuscript.`;
     } else if (qLower.includes('dataset') || qLower.includes('corpus') || qLower.includes('data')) {
-      const dataChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('data') || c.chunk.content.toLowerCase().includes('data')) || primaryChunk;
-      synthesis = `Based on the paper's documentation in the **${dataChunk.chunk.sectionName}** section (Page ${dataChunk.chunk.pageNumber}):\n\n> "${dataChunk.chunk.content.substring(0, 280)}..."\n\nThe authors specify their data curation and sampling procedures as highlighted above. The empirical corpus details conform to the documented section evidence.`;
-    } else if (qLower.includes('model') || qLower.includes('architecture') || qLower.includes('xlm') || qLower.includes('bert')) {
-      const modelChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('method') || c.chunk.content.toLowerCase().includes('model')) || primaryChunk;
-      synthesis = `According to the **${modelChunk.chunk.sectionName}** section (Page ${modelChunk.chunk.pageNumber}):\n\n> "${modelChunk.chunk.content.substring(0, 280)}..."\n\nThe authors detail their architectural configuration and baseline selections as shown in the empirical evidence above.`;
-    } else if (qLower.includes('result') || qLower.includes('finding') || qLower.includes('metric') || qLower.includes('f1')) {
-      const resChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('result') || c.chunk.content.toLowerCase().includes('f1') || c.chunk.content.toLowerCase().includes('%')) || primaryChunk;
-      synthesis = `As documented in **${resChunk.chunk.sectionName}** (Page ${resChunk.chunk.pageNumber}):\n\n> "${resChunk.chunk.content.substring(0, 280)}..."\n\nThe statistical measurements and comparative baselines validate these reported metrics.`;
+      const dataChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('data') || c.chunk.content.toLowerCase().includes('data') || c.chunk.content.toLowerCase().includes('corpus')) || primaryChunk;
+      synthesis = `Based on the paper's documentation in the **${dataChunk.chunk.sectionName}** section (Page ${dataChunk.chunk.pageNumber}):\n\n> "${dataChunk.chunk.content.substring(0, 300)}..."\n\nThe authors outline their data curation, annotation guidelines, and preprocessing procedures as detailed in the passage above.`;
+    } else if (qLower.includes('method') || qLower.includes('architecture') || qLower.includes('model') || qLower.includes('approach')) {
+      const methodChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('method') || c.chunk.sectionName.toLowerCase().includes('approach') || c.chunk.content.toLowerCase().includes('model')) || primaryChunk;
+      synthesis = `According to the **${methodChunk.chunk.sectionName}** section (Page ${methodChunk.chunk.pageNumber}):\n\n> "${methodChunk.chunk.content.substring(0, 300)}..."\n\nThe authors describe their theoretical formulation and experimental methodology as evidenced above.`;
+    } else if (qLower.includes('result') || qLower.includes('finding') || qLower.includes('metric') || qLower.includes('score') || qLower.includes('evaluat')) {
+      const resChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('result') || c.chunk.sectionName.toLowerCase().includes('eval') || c.chunk.content.toLowerCase().includes('%') || c.chunk.content.toLowerCase().includes('table')) || primaryChunk;
+      synthesis = `As documented in **${resChunk.chunk.sectionName}** (Page ${resChunk.chunk.pageNumber}):\n\n> "${resChunk.chunk.content.substring(0, 300)}..."\n\nThe reported statistical measurements and comparative baselines validate the authors' empirical claims.`;
     } else {
-      synthesis = `Regarding your inquiry on *" ${req.prompt} "*:\n\nDirect evidence from **${primaryChunk.chunk.sectionName}** (Page ${primaryChunk.chunk.pageNumber}) states:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\nThis passage provides the primary grounding for the investigation within the retrieved paper content.`;
+      synthesis = `Regarding your inquiry on *" ${req.prompt} "*:\n\nDirect evidence from **${primaryChunk.chunk.sectionName}** (Page ${primaryChunk.chunk.pageNumber}) of **${paperTitle}** states:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\nThis passage provides the primary grounding for the investigation within the retrieved paper content.`;
     }
 
     return {

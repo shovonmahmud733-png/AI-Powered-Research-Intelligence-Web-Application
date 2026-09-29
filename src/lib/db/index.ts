@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import {
   User,
   ResearchProject,
@@ -55,6 +56,7 @@ export interface DatabaseSchema {
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
+const TMP_DB_FILE = path.join(os.tmpdir(), 'research_platform_db.json');
 
 class DatabaseService {
   private data: DatabaseSchema;
@@ -94,9 +96,23 @@ class DatabaseService {
   private load() {
     if (this.isLoaded) return;
     try {
-      this.ensureDir();
-      if (fs.existsSync(DB_FILE)) {
-        const raw = fs.readFileSync(DB_FILE, 'utf-8');
+      let raw: string | null = null;
+      if (fs.existsSync(TMP_DB_FILE)) {
+        try {
+          raw = fs.readFileSync(TMP_DB_FILE, 'utf-8');
+        } catch {
+          raw = null;
+        }
+      }
+      if (!raw && fs.existsSync(DB_FILE)) {
+        try {
+          raw = fs.readFileSync(DB_FILE, 'utf-8');
+        } catch {
+          raw = null;
+        }
+      }
+
+      if (raw) {
         const parsed = JSON.parse(raw);
         this.data = {
           ...this.getDefaultSchema(),
@@ -114,11 +130,20 @@ class DatabaseService {
   }
 
   private save() {
+    const payload = JSON.stringify(this.data, null, 2);
+    // 1. Try to save to TMP_DB_FILE (writable in Vercel serverless /tmp)
+    try {
+      fs.writeFileSync(TMP_DB_FILE, payload, 'utf-8');
+    } catch {
+      // Ignored if /tmp is unavailable
+    }
+
+    // 2. Try to save to local DATA_DIR / DB_FILE (standard local/container persistence)
     try {
       this.ensureDir();
-      fs.writeFileSync(DB_FILE, JSON.stringify(this.data, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('Failed to persist database to file:', err);
+      fs.writeFileSync(DB_FILE, payload, 'utf-8');
+    } catch {
+      // Ignored if read-only filesystem (e.g. AWS Lambda / Vercel Serverless)
     }
   }
 
@@ -274,6 +299,15 @@ class DatabaseService {
   getMatrixRows(projectId: string): LiteratureMatrixRow[] {
     this.load();
     return this.data.matrix.filter((m) => m.projectId === projectId);
+  }
+
+  getMatrixByProject(projectId: string): LiteratureMatrixRow[] {
+    return this.getMatrixRows(projectId);
+  }
+
+  getMatrixByPaper(paperId: string): LiteratureMatrixRow | undefined {
+    this.load();
+    return this.data.matrix.find((m) => m.paperId === paperId);
   }
 
   saveMatrixRow(row: LiteratureMatrixRow): LiteratureMatrixRow {

@@ -80,8 +80,31 @@ export class ResearchChatEngine {
     // 2. Retrieve top-scoring document chunks using Hybrid Vector RAG
     const scoredChunks = vectorStore.retrieveRelevantChunks(targetChunks, userMessage, 5);
 
-    // 3. Retrieve relevant evidence & contradictions
+    // 3. Retrieve structured analysis and literature matrix
+    const projectMatrix = db.getMatrixByProject(projectId);
+    const paperAnalyses = (scope === 'paper' && paperId && !searchAcrossLibrary
+      ? [db.getAnalysisByPaper(paperId)]
+      : papers.map((p) => db.getAnalysisByPaper(p.id))
+    ).filter(Boolean);
+
+    // 4. Retrieve relevant evidence & contradictions
     const qLower = userMessage.toLowerCase();
+    const isLimitationQuery =
+      qLower.includes('limitation') ||
+      qLower.includes('limit') ||
+      qLower.includes('drawback') ||
+      qLower.includes('bottleneck') ||
+      qLower.includes('constraint');
+
+    const isOverviewQuery =
+      qLower.includes('about') ||
+      qLower.includes('summar') ||
+      qLower.includes('what') ||
+      qLower.includes('overview') ||
+      qLower.includes('explain') ||
+      qLower.includes('describe') ||
+      qLower.includes('paper');
+
     const relevantEvidence = allEvidence.filter((e) => {
       const eText = `${e.claim} ${e.snippet}`.toLowerCase();
       return qLower.split(/\s+/).some((term) => term.length > 3 && eText.includes(term));
@@ -97,7 +120,7 @@ export class ResearchChatEngine {
       return qLower.split(/\s+/).some((term) => term.length > 3 && gText.includes(term));
     });
 
-    // 4. Build Structured Sources List
+    // 5. Build Structured Sources List
     const sources: ChatSourceItem[] = [];
 
     scoredChunks.forEach((sc) => {
@@ -112,6 +135,39 @@ export class ResearchChatEngine {
         similarityScore: Math.round(sc.score * 100),
       });
     });
+
+    // If query asks for limitations, also populate matrix/analysis limitation sources
+    if (isLimitationQuery) {
+      projectMatrix.forEach((m) => {
+        if (m.limitation) {
+          sources.push({
+            paperId: m.paperId,
+            paperTitle: m.paperTitle,
+            page: 1,
+            section: 'Limitations (Empirical Matrix)',
+            snippet: m.limitation,
+            sourceType: 'evidence',
+            similarityScore: 94,
+          });
+        }
+      });
+      paperAnalyses.forEach((a: any) => {
+        if (a && a.limitations && Array.isArray(a.limitations)) {
+          const p = papers.find((paper) => paper.id === a.paperId);
+          a.limitations.forEach((lim: string) => {
+            sources.push({
+              paperId: a.paperId,
+              paperTitle: p ? p.title : 'Uploaded Research Manuscript',
+              page: 1,
+              section: 'Limitations (Structured Extraction)',
+              snippet: lim,
+              sourceType: 'evidence',
+              similarityScore: 94,
+            });
+          });
+        }
+      });
+    }
 
     relevantEvidence.slice(0, 2).forEach((ev) => {
       sources.push({
@@ -133,7 +189,7 @@ export class ResearchChatEngine {
       });
     });
 
-    // 5. Construct System and Context Prompt
+    // 6. Construct System and Context Prompt
     const systemPrompt = `You are Research Copilot, an evidence-grounded AI research partner for academic researchers.
 Your primary role is to help the researcher reason over their research project, literature, extracted PDF chunks, and evidence.
 You are NOT a generic conversational chatbot.
@@ -149,13 +205,16 @@ CRITICAL OPERATIONAL RULES:
    "Insufficient evidence in the current research library."
 5. Never declare an arbitrary "superior paper" or "winner" when comparing conflicting studies; outline the factual trade-offs (datasets, preprocessing, hyperparameters, metrics).`;
 
-    // 6. Execute through Model Router
+    // 7. Execute through Model Router
     const promptPayload = `Project Field: ${project?.researchField || 'Scientific Research'}
 Active Research Questions:
 ${project?.researchQuestions?.map((q) => `- [${q.status.toUpperCase()}] ${q.question}`).join('\n') || 'None recorded'}
 
 Retrieved Paper Chunks:
 ${scoredChunks.map((sc) => `[Source: ${papers.find((p) => p.id === sc.chunk.paperId)?.title || 'Paper'} | Page ${sc.chunk.pageNumber} | Section: ${sc.chunk.sectionName}]\n${sc.chunk.content}`).join('\n\n---\n\n')}
+
+Structured Literature Matrix:
+${projectMatrix.map((m) => `• [${m.paperTitle}]: Dataset -> ${m.dataset} | Method -> ${m.method} | Result -> ${m.result} | Limitation -> ${m.limitation}`).join('\n')}
 
 Relevant Evidence & Contradictions:
 ${relevantEvidence.map((e) => `• Evidence [${e.verificationStatus}]: "${e.claim}" (Source: ${e.paperTitle}, Page ${e.page})`).join('\n')}
@@ -165,8 +224,15 @@ Researcher Inquiry: ${userMessage}
 
 Please formulate an evidence-backed, rigorous research answer citing exact pages and sections.`;
 
-    // Check if we have chunks with sufficient semantic match
-    const hasEvidence = targetChunks.length > 0 && scoredChunks.length > 0 && scoredChunks[0].score >= 0.20;
+    // Check if we have chunks with sufficient semantic match or structured research context
+    const hasEvidence =
+      targetChunks.length > 0 &&
+      (
+        (scoredChunks.length > 0 && scoredChunks[0].score >= 0.15) ||
+        relevantEvidence.length > 0 ||
+        (isLimitationQuery && (projectMatrix.some((m) => m.limitation) || paperAnalyses.some((a: any) => a?.limitations?.length > 0))) ||
+        (scoredChunks.length > 0 && isOverviewQuery)
+      );
 
     let responseContent = '';
     let modelUsed = 'offline-academic-reasoner-v1';
@@ -182,13 +248,18 @@ To ground reasoning on this topic:
       // Clear sources when there is no matching evidence
       sources.length = 0;
     } else {
+      const primaryPaper =
+        scope === 'paper' && paperId
+          ? papers.find((p) => p.id === paperId) || db.getPaperById(paperId)
+          : (scoredChunks[0] ? papers.find((p) => p.id === scoredChunks[0].chunk.paperId) : papers[0]);
+
       const response = await modelRouter.execute({
         task: 'research_synthesis',
         prompt: promptPayload,
         userQuery: userMessage,
         systemPrompt,
         retrievedChunks: scoredChunks,
-        paperMetadata: papers[0] ? { title: papers[0].title } : undefined,
+        paperMetadata: primaryPaper ? { title: primaryPaper.title } : undefined,
       });
 
       responseContent = response.answer;

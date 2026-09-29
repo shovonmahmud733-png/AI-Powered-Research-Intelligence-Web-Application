@@ -186,4 +186,88 @@ describe('Research Copilot AI Chat: Database & RAG Engine Tests', () => {
     expect(result.content).toBeDefined();
     expect(result.content.toLowerCase().includes('disagree') || result.content.toLowerCase().includes('claim') || result.content.toLowerCase().includes('trade-off')).toBe(true);
   });
+
+  it('8. Research Chat Engine accurately answers "What are the limitations?" on uploaded papers', async () => {
+    const uploadProjId = `proj-test-${Date.now()}`;
+    db.createProject({
+      id: uploadProjId,
+      userId: 'usr_demo_researcher_01',
+      title: 'Upload Test Project',
+      description: 'Testing PDF upload and inquiry',
+      researchField: 'Machine Learning',
+      researchQuestions: [],
+      objectives: [],
+      tags: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const paperId = `paper-test-${Date.now()}`;
+    db.createPaper({
+      id: paperId,
+      projectId: uploadProjId,
+      title: 'Neural Transformer Scaling Boundaries',
+      authors: ['Jane Doe', 'John Smith'],
+      abstract: 'We explore limitations in neural transformer context windows.',
+      publicationYear: 2026,
+      journalOrConference: 'ICML',
+      url: '',
+      citationCount: 0,
+      sourceProvider: 'upload',
+      sourceId: 'paper.pdf',
+      references: [],
+      retrievalDate: new Date().toISOString(),
+      metadataStatus: 'partial',
+      retractionStatus: 'clean',
+      processingStatus: 'ready',
+      createdAt: new Date().toISOString(),
+    });
+
+    db.addChunks([
+      {
+        id: `chunk-up-1-${Date.now()}`,
+        paperId,
+        pageNumber: 1,
+        sectionName: 'Introduction',
+        chunkIndex: 0,
+        content: 'This paper investigates transformer scaling properties and memory footprint.',
+      },
+      {
+        id: `chunk-up-2-${Date.now()}`,
+        paperId,
+        pageNumber: 4,
+        sectionName: 'Limitations',
+        chunkIndex: 1,
+        content: 'Limitations: The primary limitation of our approach is the quadratic memory complexity in long-sequence attention, which restricts deployment on commodity GPUs.',
+      },
+    ]);
+
+    // Test with singular "what are the limitation?" as the user typed in screenshot
+    const resultSingular = await researchChatEngine.generateResponse({
+      projectId: uploadProjId,
+      paperId,
+      prompt: 'what are the limitation?',
+      scope: 'paper',
+      history: [],
+    });
+
+    expect(resultSingular).toBeDefined();
+    expect(resultSingular.content.toLowerCase()).toContain('limitation');
+    expect(resultSingular.content).not.toContain('Insufficient evidence in the current research library');
+    expect(resultSingular.sources.length).toBeGreaterThan(0);
+    expect(resultSingular.sources[0].section).toBe('Limitations');
+
+    // Test with plural "What are the limitations?" at project scope
+    const resultPlural = await researchChatEngine.generateResponse({
+      projectId: uploadProjId,
+      prompt: 'What are the limitations?',
+      scope: 'project',
+      history: [],
+    });
+
+    expect(resultPlural).toBeDefined();
+    expect(resultPlural.content.toLowerCase()).toContain('limitation');
+    expect(resultPlural.content).not.toContain('Insufficient evidence in the current research library');
+    expect(resultPlural.sources.length).toBeGreaterThan(0);
+  });
 });

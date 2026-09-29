@@ -12,9 +12,21 @@ const STOPWORDS = new Set([
   'be', 'been', 'has', 'have', 'had', 'do', 'does', 'did', 'but', 'not',
   'what', 'when', 'where', 'who', 'how', 'why', 'can', 'could', 'should',
   'would', 'will', 'than', 'more', 'some', 'any', 'into', 'such', 'other',
-  'about', 'their', 'there', 'they', 'our', 'out',
+  'about', 'their', 'there', 'they', 'our', 'out', 'tell', 'me', 'give',
   'study', 'studies', 'paper', 'papers'
 ]);
+
+export function getStem(word: string): string {
+  let s = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (s.endsWith('ies') && s.length > 4) return s.slice(0, -3) + 'y';
+  if (s.endsWith('ing') && s.length > 5) return s.slice(0, -3);
+  if (s.endsWith('ed') && s.length > 4) return s.slice(0, -2);
+  if (s.endsWith('tions') && s.length > 6) return s.slice(0, -5) + 't';
+  if (s.endsWith('tion') && s.length > 5) return s.slice(0, -4) + 't';
+  if (s.endsWith('sses') && s.length > 5) return s.slice(0, -2);
+  if (s.endsWith('s') && !s.endsWith('ss') && s.length > 3) return s.slice(0, -1);
+  return s;
+}
 
 function cleanTokens(text: string): string[] {
   return text
@@ -26,7 +38,7 @@ function cleanTokens(text: string): string[] {
 
 export class VectorStore {
   /**
-   * Hybrid retrieval combining TF-IDF lexical matching and dense vector similarity
+   * Hybrid retrieval combining TF-IDF lexical matching, stemming, and dense vector similarity
    */
   retrieveRelevantChunks(
     chunks: DocumentChunk[],
@@ -36,11 +48,14 @@ export class VectorStore {
     if (chunks.length === 0) return [];
 
     const queryTokens = cleanTokens(query);
+    const queryStems = queryTokens.map(getStem);
+
+    // If query is very generic ("summarize", "tell me about this paper"), provide first informative chunks
     if (queryTokens.length === 0) {
       return chunks.slice(0, topK).map((c) => ({
         chunk: c,
-        score: 0.5,
-        highlightSnippets: [c.content.substring(0, 150) + '...'],
+        score: 0.75,
+        highlightSnippets: [c.content.substring(0, 200) + '...'],
       }));
     }
 
@@ -49,59 +64,93 @@ export class VectorStore {
       queryFreq[token] = (queryFreq[token] || 0) + 1;
     }
 
-    // Document frequencies
+    // Document token and stem frequencies
     const docFreq: Record<string, number> = {};
-    const chunkTokensList: string[][] = chunks.map((c) => {
+    const chunkTokensList: string[][] = [];
+    const chunkStemsList: string[][] = [];
+
+    chunks.forEach((c) => {
       const tokens = cleanTokens(c.content + ' ' + c.sectionName);
-      const unique = new Set(tokens);
-      unique.forEach((t) => {
-        docFreq[t] = (docFreq[t] || 0) + 1;
+      const stems = tokens.map(getStem);
+      chunkTokensList.push(tokens);
+      chunkStemsList.push(stems);
+
+      const uniqueStems = new Set(stems);
+      uniqueStems.forEach((st) => {
+        docFreq[st] = (docFreq[st] || 0) + 1;
       });
-      return tokens;
     });
 
     const numDocs = chunks.length;
 
     const scored: ScoredChunk[] = chunks.map((chunk, idx) => {
       const tokens = chunkTokensList[idx];
-      const chunkTokenFreq: Record<string, number> = {};
-      for (const t of tokens) {
-        chunkTokenFreq[t] = (chunkTokenFreq[t] || 0) + 1;
+      const stems = chunkStemsList[idx];
+
+      const chunkStemFreq: Record<string, number> = {};
+      for (const st of stems) {
+        chunkStemFreq[st] = (chunkStemFreq[st] || 0) + 1;
       }
 
       let tfidfScore = 0;
       let matchedTokensCount = 0;
 
-      for (const [qTerm, qCount] of Object.entries(queryFreq)) {
-        if (chunkTokenFreq[qTerm]) {
-          matchedTokensCount++;
-          const tf = chunkTokenFreq[qTerm] / tokens.length;
-          const idf = Math.log((numDocs + 1) / ((docFreq[qTerm] || 0) + 1)) + 1;
-          tfidfScore += tf * idf * qCount;
-        }
-      }
+      queryTokens.forEach((qTerm, qIdx) => {
+        const qStem = queryStems[qIdx];
+        const qCount = queryFreq[qTerm] || 1;
 
-      // Bonus for section relevance (e.g. asking about "dataset" and chunk is in "Dataset & Preprocessing")
+        // 1. Direct stem match
+        if (chunkStemFreq[qStem]) {
+          matchedTokensCount += chunkStemFreq[qStem];
+          const tf = chunkStemFreq[qStem] / Math.max(tokens.length, 1);
+          const idf = Math.log((numDocs + 1) / ((docFreq[qStem] || 0) + 1)) + 1;
+          tfidfScore += tf * idf * qCount * 1.2;
+        } else {
+          // 2. Substring / prefix match for terms length >= 4
+          const partialMatch = stems.some(
+            (s) => (s.length >= 4 && qStem.startsWith(s)) || (qStem.length >= 4 && s.startsWith(qStem))
+          );
+          if (partialMatch) {
+            matchedTokensCount++;
+            tfidfScore += 0.4 * qCount;
+          }
+        }
+      });
+
+      // Bonus for section relevance (e.g. asking about "limitation" and section is "Limitations")
       const sectionLower = chunk.sectionName.toLowerCase();
-      for (const qTerm of queryTokens) {
-        if (sectionLower.includes(qTerm)) {
-          tfidfScore += 0.5;
+      queryTokens.forEach((qTerm, qIdx) => {
+        const qStem = queryStems[qIdx];
+        if (
+          sectionLower.includes(qTerm) ||
+          sectionLower.includes(qStem) ||
+          (qStem.length >= 4 && sectionLower.includes(qStem.substring(0, 4)))
+        ) {
+          tfidfScore += 1.2;
+          matchedTokensCount++;
         }
-      }
+      });
 
-      // Normalize score: 0 if no match, between 0.1 and 0.99 for actual matches
-      const normalizedScore = tfidfScore === 0 ? 0 : Math.min(0.99, Math.max(0.1, tfidfScore * 10));
+      // Normalize score: between 0.35 and 0.99 for actual matches
+      const normalizedScore =
+        matchedTokensCount === 0 && tfidfScore === 0
+          ? 0
+          : Math.min(0.99, Math.max(0.35, tfidfScore * 5));
 
-      // Extract best snippet containing query terms
+      // Extract best snippet containing query terms or stems
       const sentences = chunk.content.split(/(?<=[.?!])\s+/);
-      let bestSnippet = chunk.content.substring(0, 200) + '...';
+      let bestSnippet = chunk.content.substring(0, 220) + '...';
       let maxTermOverlap = 0;
 
       for (const sentence of sentences) {
         const sLower = sentence.toLowerCase();
         let overlap = 0;
-        for (const qt of queryTokens) {
-          if (sLower.includes(qt)) overlap++;
+        for (let i = 0; i < queryTokens.length; i++) {
+          const qt = queryTokens[i];
+          const qs = queryStems[i];
+          if (sLower.includes(qt) || sLower.includes(qs)) {
+            overlap++;
+          }
         }
         if (overlap > maxTermOverlap) {
           maxTermOverlap = overlap;
@@ -118,6 +167,20 @@ export class VectorStore {
 
     // Sort by descending score
     scored.sort((a, b) => b.score - a.score);
+
+    // If there were query tokens but no exact matches, check if query was asking for summary/overview
+    const isOverviewQuery = queryTokens.some((t) =>
+      ['about', 'summary', 'overview', 'explain', 'what', 'describe', 'work'].includes(t)
+    );
+    if (scored.length > 0 && scored[0].score === 0 && isOverviewQuery) {
+      // Elevate the first chunks as baseline context
+      return chunks.slice(0, topK).map((c, i) => ({
+        chunk: c,
+        score: 0.65 - i * 0.05,
+        highlightSnippets: [c.content.substring(0, 200) + '...'],
+      }));
+    }
+
     return scored.slice(0, topK);
   }
 }

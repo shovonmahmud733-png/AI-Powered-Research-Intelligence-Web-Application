@@ -16,7 +16,11 @@ export class ExtractionAgent {
     const methodChunks = chunks.filter((c) => /method|architecture|approach/i.test(c.sectionName));
     const dataChunks = chunks.filter((c) => /data|corpus|dataset/i.test(c.sectionName));
     const resultChunks = chunks.filter((c) => /result|eval|discussion/i.test(c.sectionName));
-    const limChunks = chunks.filter((c) => /limit|threat|future|conclusion/i.test(c.sectionName));
+    const limChunks = chunks.filter(
+      (c) =>
+        /limit|threat|constraint/i.test(c.sectionName) ||
+        /limitation|constrained by|restricted to|bottleneck|drawback/i.test(c.content)
+    );
 
     const problem = introChunks.length > 0
       ? introChunks[0].content.substring(0, 240) + '...'
@@ -25,6 +29,25 @@ export class ExtractionAgent {
     const datasetName = dataChunks.length > 0
       ? (dataChunks[0].content.match(/(?:dataset|corpus|benchmark)\s+(?:called|named|termed|of)?\s*([A-Z0-9_-]{2,25})/i)?.[1] || 'Annotated Research Benchmark Corpus')
       : 'Empirical Research Dataset';
+
+    let extractedLimitations: string[] = [];
+    if (limChunks.length > 0) {
+      for (const lc of limChunks) {
+        const sentences = lc.content.split(/(?<=[.?!])\s+/);
+        const limSentences = sentences.filter((s) => /limit|constraint|threat|restrict|bottleneck|drawback/i.test(s));
+        if (limSentences.length > 0) {
+          extractedLimitations.push(...limSentences.map((s) => s.trim().substring(0, 250)));
+        } else {
+          extractedLimitations.push(lc.content.substring(0, 200).trim() + '...');
+        }
+      }
+    }
+    if (extractedLimitations.length === 0) {
+      extractedLimitations = [
+        'Domain evaluation restricted to available benchmark samples',
+        'Computational constraints on sequence length and resource scaling',
+      ];
+    }
 
     return {
       id: `analysis-${paperId}`,
@@ -54,9 +77,7 @@ export class ExtractionAgent {
         'Macro-F1': '82.4%',
         'Classification Accuracy': '83.9%',
       },
-      limitations: limChunks.length > 0
-        ? [limChunks[0].content.substring(0, 180) + '...']
-        : ['Domain evaluation restricted to available benchmark samples', 'Computational constraints on max sequence length'],
+      limitations: extractedLimitations.slice(0, 4),
       futureWork: [
         'Exploration of parameter-efficient low-rank adapters (LoRA)',
         'Expansion to multilingual cross-dialectal grounding',
