@@ -17,13 +17,31 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { sessionId, projectId, content, scope = 'project', paperId, stream = false } = body;
+    const { sessionId, projectId, content, scope = 'project', paperId, stream = false, clientPapers, clientChunks } = body;
 
     if (!sessionId || !projectId || !content) {
       return NextResponse.json(
         { error: 'sessionId, projectId, and content are required' },
         { status: 400 }
       );
+    }
+
+    // Synchronize clientPapers into db if not present in this serverless container
+    if (clientPapers && Array.isArray(clientPapers)) {
+      for (const p of clientPapers) {
+        if (!db.getPaperById(p.id)) {
+          db.createPaper(p);
+        }
+      }
+    }
+
+    // Synchronize clientChunks into db if not present in this serverless container
+    if (clientChunks && Array.isArray(clientChunks) && clientChunks.length > 0) {
+      const existingChunkIds = new Set(db.getChunksByProject(projectId).map((c) => c.id));
+      const chunksToAdd = clientChunks.filter((c: any) => !existingChunkIds.has(c.id));
+      if (chunksToAdd.length > 0) {
+        db.addChunks(chunksToAdd);
+      }
     }
 
     // 1. Record User Message
@@ -47,6 +65,8 @@ export async function POST(req: Request) {
       paperId,
       userMessage: content,
       history,
+      clientPapers,
+      clientChunks,
     });
 
     // 4. Record Assistant Message

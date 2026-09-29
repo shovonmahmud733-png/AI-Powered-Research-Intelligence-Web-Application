@@ -121,6 +121,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       paper,
+      chunks: fullChunks,
       chunksExtracted: fullChunks.length,
       totalPages: parseResult.totalPages,
       warnings: parseResult.warnings,

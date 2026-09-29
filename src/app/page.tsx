@@ -78,10 +78,36 @@ export default function ResearchWorkspacePage() {
   const fetchPapers = async (projectId: string) => {
     try {
       const res = await fetch(`/api/papers?projectId=${projectId}`);
+      let apiPapers: Paper[] = [];
       if (res.ok) {
         const data = await res.json();
-        setPapers(data.papers || []);
+        apiPapers = data.papers || [];
       }
+
+      // Merge with custom papers saved in localStorage for this project
+      let localPapers: Paper[] = [];
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('rp_custom_papers');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            localPapers = parsed.filter((p: Paper) => p.projectId === projectId);
+          }
+        } catch (e) {
+          console.warn('Local paper parse error:', e);
+        }
+      }
+
+      // Deduplicate by id
+      const seen = new Set(apiPapers.map((p) => p.id));
+      const combined = [...apiPapers];
+      for (const lp of localPapers) {
+        if (!seen.has(lp.id)) {
+          seen.add(lp.id);
+          combined.push(lp);
+        }
+      }
+      setPapers(combined);
     } catch (e) {
       console.error('Papers fetch error:', e);
     }

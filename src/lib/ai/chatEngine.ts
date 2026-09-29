@@ -13,6 +13,8 @@ export interface ChatEngineOptions {
   searchAcrossLibrary?: boolean;
   history?: ChatMessage[];
   temperature?: number;
+  clientPapers?: Paper[];
+  clientChunks?: DocumentChunk[];
 }
 
 export interface ChatEngineResult {
@@ -28,14 +30,18 @@ export class ResearchChatEngine {
    * Assembles project context and executes evidence-grounded research reasoning
    */
   async generateResponse(options: ChatEngineOptions): Promise<ChatEngineResult> {
-    const { projectId, paperId } = options;
+    const { projectId, paperId, clientPapers, clientChunks } = options;
     const userMessage = options.userMessage || options.prompt || '';
     const scope = options.scope || 'project';
     const searchAcrossLibrary = options.searchAcrossLibrary ?? false;
     const history = options.history || [];
 
     const project = db.getProjectById(projectId);
-    const papers = db.getPapers(projectId);
+    let papers = db.getPapers(projectId);
+    if (papers.length === 0 && clientPapers && clientPapers.length > 0) {
+      papers = clientPapers;
+    }
+
     const allEvidence = db.getEvidence(projectId);
     const allGaps = db.getGaps(projectId);
     const allContradictions = db.getContradictions(projectId);
@@ -46,9 +52,12 @@ export class ResearchChatEngine {
     let targetChunks: DocumentChunk[] = [];
     if (scope === 'paper' && paperId && !searchAcrossLibrary) {
       targetChunks = db.getChunksByPaper(paperId);
+      if (targetChunks.length === 0 && clientChunks && clientChunks.length > 0) {
+        targetChunks = clientChunks.filter((c) => c.paperId === paperId);
+      }
       // If paper has no chunks yet, create virtual chunk from abstract
       if (targetChunks.length === 0) {
-        const singlePaper = db.getPaperById(paperId);
+        const singlePaper = db.getPaperById(paperId) || papers.find((p) => p.id === paperId);
         if (singlePaper) {
           targetChunks = [
             {
@@ -64,6 +73,9 @@ export class ResearchChatEngine {
       }
     } else {
       targetChunks = db.getChunksByProject(projectId);
+      if (targetChunks.length === 0 && clientChunks && clientChunks.length > 0) {
+        targetChunks = clientChunks;
+      }
       if (targetChunks.length === 0) {
         // Fallback to paper abstracts
         targetChunks = papers.map((p, idx) => ({

@@ -76,6 +76,23 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
         throw new Error(data.error || 'Upload failed');
       }
 
+      // Persist paper and chunks to client cache for multi-instance serverless resilience
+      if (typeof window !== 'undefined' && data.paper) {
+        try {
+          const storedPapers = JSON.parse(localStorage.getItem('rp_custom_papers') || '[]');
+          const updatedPapers = [data.paper, ...storedPapers.filter((p: any) => p.id !== data.paper.id)];
+          localStorage.setItem('rp_custom_papers', JSON.stringify(updatedPapers));
+
+          if (data.chunks && Array.isArray(data.chunks) && data.chunks.length > 0) {
+            const storedChunks = JSON.parse(localStorage.getItem('rp_custom_chunks') || '[]');
+            const updatedChunks = [...data.chunks, ...storedChunks.filter((c: any) => c.paperId !== data.paper.id)];
+            localStorage.setItem('rp_custom_chunks', JSON.stringify(updatedChunks));
+          }
+        } catch (storageErr) {
+          console.warn('Local storage sync warning:', storageErr);
+        }
+      }
+
       setUploadProgress(
         `Document extracted! ${data.chunksExtracted} paragraphs indexed across ${data.totalPages} pages.`
       );

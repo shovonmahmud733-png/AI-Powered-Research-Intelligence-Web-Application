@@ -281,6 +281,24 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
 
     try {
       const effectiveScope = searchAcrossLibrary ? 'project' : scope;
+
+      let clientChunks: any[] = [];
+      if (typeof window !== 'undefined') {
+        try {
+          const storedChunks = localStorage.getItem('rp_custom_chunks');
+          if (storedChunks) {
+            const parsed = JSON.parse(storedChunks);
+            if (Array.isArray(parsed)) {
+              const relevantPaperIds = new Set(papers.map((p) => p.id));
+              if (selectedPaperId) relevantPaperIds.add(selectedPaperId);
+              clientChunks = parsed.filter((c: any) => relevantPaperIds.has(c.paperId));
+            }
+          }
+        } catch (storageErr) {
+          console.warn('Storage read warning:', storageErr);
+        }
+      }
+
       const res = await fetch('/api/chat/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -290,6 +308,8 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
           content: prompt,
           scope: effectiveScope,
           paperId: effectiveScope === 'paper' ? selectedPaperId : undefined,
+          clientPapers: papers,
+          clientChunks,
         }),
       });
 
