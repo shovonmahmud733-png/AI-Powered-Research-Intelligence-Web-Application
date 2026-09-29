@@ -83,20 +83,36 @@ class OfflineAcademicEngine implements LLMProvider {
     const paperTitle = req.paperMetadata?.title || 'the indexed paper';
 
     if (qLower.includes('limitation') || qLower.includes('limit') || qLower.includes('drawback') || qLower.includes('bottleneck')) {
-      const limChunks = chunks.filter(
+      const meaningfulChunks = chunks.filter(
+        (c) => !c.chunk.content.toLowerCase().startsWith('extracted pdf text document')
+      );
+      const limChunks = meaningfulChunks.filter(
         (c) =>
           c.chunk.sectionName.toLowerCase().includes('limit') ||
           c.chunk.content.toLowerCase().includes('limitation') ||
           c.chunk.content.toLowerCase().includes('constraint') ||
+          c.chunk.content.toLowerCase().includes('restrict') ||
           c.chunk.content.toLowerCase().includes('future work')
       );
-      const targetList = limChunks.length > 0 ? limChunks : [primaryChunk];
-      synthesis = `Based on the empirical documentation in **${paperTitle}**, the following core limitations are reported:\n\n${targetList
-        .map(
-          (c, i) =>
-            `${i + 1}. **${c.chunk.sectionName}** (Page ${c.chunk.pageNumber}):\n   > "${c.chunk.content.substring(0, 320)}..."`
-        )
-        .join('\n\n')}\n\n**AI Methodological Note**: These limitations represent author-identified constraints regarding dataset scale, evaluation boundaries, or modeling assumptions. Review the source drawer below for complete contextual passages.`;
+
+      if (limChunks.length > 0) {
+        synthesis = `Based on the empirical documentation in **${paperTitle}**, the following core limitations are reported:\n\n${limChunks
+          .slice(0, 3)
+          .map((c, i) => {
+            const sentences = c.chunk.content.split(/(?<=[.?!])\s+/);
+            const limSentence =
+              sentences.find((s) =>
+                /limit|constraint|restrict|bottleneck|threat|drawback|gpu|vram|memory|cost|scale/i.test(s)
+              ) || c.chunk.content.substring(0, 260);
+            return `${i + 1}. **${c.chunk.sectionName}** (Page ${c.chunk.pageNumber}):\n   > "${limSentence.trim()}"`;
+          })
+          .join('\n\n')}\n\n**AI Methodological Note**: These limitations represent author-identified constraints regarding dataset scale, evaluation boundaries, or modeling assumptions. Review the source drawer below for complete contextual passages.`;
+      } else if (meaningfulChunks.length > 0) {
+        const topChunk = meaningfulChunks[0];
+        synthesis = `Based on the extracted text from **${paperTitle}**, no explicit "Limitations" section was declared by the authors in the document. However, based on the documented experimental scope in **${topChunk.chunk.sectionName}** (Page ${topChunk.chunk.pageNumber}):\n\n> "${topChunk.chunk.content.substring(0, 280)}..."\n\n**Methodological Observation**: The research scope is bounded by the specific baselines, datasets, and benchmark constraints reported above.`;
+      } else {
+        synthesis = `Based on the available metadata for **${paperTitle}**, the document does not contain an explicit limitations section. Review the paper reader or structured analysis tab for detailed empirical attributes.`;
+      }
     } else if (qLower.includes('compare') || qLower.includes('versus') || qLower.includes('vs')) {
       synthesis = `A comparative analysis across the retrieved literature reveals significant trade-offs in methodology and empirical outcomes:\n\n${chunks
         .slice(0, 3)
