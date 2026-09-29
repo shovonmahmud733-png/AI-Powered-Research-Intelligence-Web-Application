@@ -232,3 +232,38 @@ export interface SystematicReviewItem {
   fullTextReviewed: boolean;
   reviewerNotes?: string;
 }
+
+export interface ChatSourceItem {
+  paperId?: string;
+  paperTitle?: string;
+  page?: number;
+  section?: string;
+  snippet?: string;
+  noteTitle?: string;
+  sourceType: 'paper_chunk' | 'chunk' | 'evidence' | 'note' | 'gap' | 'memory' | 'contradiction';
+  similarityScore?: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  projectId?: string;
+  role: 'user' | 'assistant';
+  content: string;
+  modelUsed?: string;
+  sources?: ChatSourceItem[];
+  interpretationNotes?: string;
+  unverifiedWarnings?: string;
+  createdAt: string;
+}
+
+export interface ChatSession {
+  id: string;
+  projectId: string;
+  title: string;
+  scope: 'project' | 'paper';
+  paperId?: string;
+  paperTitle?: string;
+  createdAt: string;
+  updatedAt: string;
+}

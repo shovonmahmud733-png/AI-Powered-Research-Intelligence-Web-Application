@@ -23,6 +23,7 @@ interface PaperLibraryProps {
   papers: Paper[];
   onRefresh: () => void;
   onSelectPaperForAnalysis: (paperId: string) => void;
+  onOpenCopilotForPaper?: (paperId: string) => void;
 }
 
 export const PaperLibrary: React.FC<PaperLibraryProps> = ({
@@ -30,6 +31,7 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
   papers,
   onRefresh,
   onSelectPaperForAnalysis,
+  onOpenCopilotForPaper,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -208,16 +210,27 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
               </div>
 
               <div className="flex items-center space-x-2 text-xs">
+                {onOpenCopilotForPaper && (
+                  <button
+                    onClick={() => onOpenCopilotForPaper(paper.id)}
+                    className="inline-flex items-center space-x-1 px-2.5 py-1 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-md border border-amber-200 dark:border-amber-800 transition-colors font-medium"
+                    title="Open paper in persistent Research Copilot with multi-turn chat"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Ask Copilot</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => {
                     setActiveAskPaper(paper);
                     setChatHistory([]);
                   }}
                   className="inline-flex items-center space-x-1 px-2.5 py-1 text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
-                  title="Ask specific questions about this paper"
+                  title="Quick single-paper RAG inspector"
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-zinc-500" />
-                  <span>Ask the Paper</span>
+                  <span>Quick Inquire</span>
                 </button>
 
                 <button
@@ -365,12 +378,28 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                   Ask: {activeAskPaper.title}
                 </h3>
               </div>
-              <button
-                onClick={() => setActiveAskPaper(null)}
-                className="text-zinc-400 hover:text-zinc-600 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                {onOpenCopilotForPaper && (
+                  <button
+                    onClick={() => {
+                      const paperId = activeAskPaper.id;
+                      setActiveAskPaper(null);
+                      onOpenCopilotForPaper(paperId);
+                    }}
+                    className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded-md hover:bg-amber-100"
+                    title="Transfer context to full persistent AI chat session"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Open in Full Copilot</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setActiveAskPaper(null)}
+                  className="text-zinc-400 hover:text-zinc-600 p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Conversation Flow */}

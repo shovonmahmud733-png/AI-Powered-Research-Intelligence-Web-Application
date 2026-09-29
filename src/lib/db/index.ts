@@ -14,6 +14,8 @@ import {
   ResearchNote,
   MLExperiment,
   SystematicReviewItem,
+  ChatSession,
+  ChatMessage,
 } from './types';
 import {
   initialUsers,
@@ -29,6 +31,8 @@ import {
   initialNotes,
   initialExperiments,
   initialSystematicReview,
+  initialChatSessions,
+  initialChatMessages,
 } from './seedData';
 
 export interface DatabaseSchema {
@@ -45,6 +49,8 @@ export interface DatabaseSchema {
   notes: ResearchNote[];
   experiments: MLExperiment[];
   systematicReview: SystematicReviewItem[];
+  chatSessions: ChatSession[];
+  chatMessages: ChatMessage[];
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -74,6 +80,8 @@ class DatabaseService {
       notes: initialNotes,
       experiments: initialExperiments,
       systematicReview: initialSystematicReview,
+      chatSessions: initialChatSessions,
+      chatMessages: initialChatMessages,
     };
   }
 
@@ -466,6 +474,101 @@ class DatabaseService {
     }
     this.save();
     return item;
+  }
+
+  // Research AI Chat Sessions & Messages
+  getChatSessions(projectId: string): ChatSession[] {
+    this.load();
+    if (!this.data.chatSessions) this.data.chatSessions = [];
+    return this.data.chatSessions.filter((s) => s.projectId === projectId);
+  }
+
+  getChatSessionById(id: string): ChatSession | undefined {
+    this.load();
+    if (!this.data.chatSessions) this.data.chatSessions = [];
+    return this.data.chatSessions.find((s) => s.id === id);
+  }
+
+  createChatSession(session: Partial<ChatSession> & { projectId: string; title: string }): ChatSession {
+    this.load();
+    if (!this.data.chatSessions) this.data.chatSessions = [];
+    const now = new Date().toISOString();
+    const newSession: ChatSession = {
+      id: session.id || `session-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      projectId: session.projectId,
+      title: session.title,
+      scope: session.scope || 'project',
+      paperId: session.paperId,
+      createdAt: session.createdAt || now,
+      updatedAt: session.updatedAt || now,
+    };
+    this.data.chatSessions.unshift(newSession);
+    this.save();
+    return newSession;
+  }
+
+  updateChatSession(id: string, updates: Partial<ChatSession>): ChatSession | undefined {
+    this.load();
+    if (!this.data.chatSessions) this.data.chatSessions = [];
+    const idx = this.data.chatSessions.findIndex((s) => s.id === id);
+    if (idx === -1) return undefined;
+    this.data.chatSessions[idx] = {
+      ...this.data.chatSessions[idx],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    this.save();
+    return this.data.chatSessions[idx];
+  }
+
+  deleteChatSession(id: string): boolean {
+    this.load();
+    if (!this.data.chatSessions) this.data.chatSessions = [];
+    if (!this.data.chatMessages) this.data.chatMessages = [];
+    this.data.chatSessions = this.data.chatSessions.filter((s) => s.id !== id);
+    this.data.chatMessages = this.data.chatMessages.filter((m) => m.sessionId !== id);
+    this.save();
+    return true;
+  }
+
+  getChatMessages(sessionId: string): ChatMessage[] {
+    this.load();
+    if (!this.data.chatMessages) this.data.chatMessages = [];
+    return this.data.chatMessages.filter((m) => m.sessionId === sessionId);
+  }
+
+  addChatMessage(msg: Partial<ChatMessage> & { sessionId: string; role: 'user' | 'assistant'; content: string }): ChatMessage {
+    this.load();
+    if (!this.data.chatMessages) this.data.chatMessages = [];
+    const now = new Date().toISOString();
+    const newMsg: ChatMessage = {
+      id: msg.id || `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      sessionId: msg.sessionId,
+      projectId: msg.projectId,
+      role: msg.role,
+      content: msg.content,
+      modelUsed: msg.modelUsed,
+      sources: msg.sources || [],
+      interpretationNotes: msg.interpretationNotes,
+      unverifiedWarnings: msg.unverifiedWarnings,
+      createdAt: msg.createdAt || now,
+    };
+    this.data.chatMessages.push(newMsg);
+    // Update session timestamp
+    const session = this.getChatSessionById(newMsg.sessionId);
+    if (session) {
+      session.updatedAt = now;
+    }
+    this.save();
+    return newMsg;
+  }
+
+  clearChatMessages(sessionId: string): boolean {
+    this.load();
+    if (!this.data.chatMessages) this.data.chatMessages = [];
+    this.data.chatMessages = this.data.chatMessages.filter((m) => m.sessionId !== sessionId);
+    this.save();
+    return true;
   }
 }
 

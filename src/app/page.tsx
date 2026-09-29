@@ -27,6 +27,7 @@ import { HumanFirstTools } from '@/components/modules/HumanFirstTools';
 import { ResearchMemoryView } from '@/components/modules/ResearchMemoryView';
 import { ResearchFeedAndTrends } from '@/components/modules/ResearchFeedAndTrends';
 import { ResearchNotesView } from '@/components/modules/ResearchNotesView';
+import { ResearchChatView } from '@/components/modules/ResearchChatView';
 
 export default function ResearchWorkspacePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -39,6 +40,8 @@ export default function ResearchWorkspacePage() {
   const [stage, setStage] = useState<WorkflowStage>('discover');
   const [subView, setSubView] = useState<SubView>('search');
   const [selectedAnalysisPaperId, setSelectedAnalysisPaperId] = useState<string | undefined>(undefined);
+  const [selectedChatPaperId, setSelectedChatPaperId] = useState<string | undefined>(undefined);
+  const [aiAssistanceEnabled, setAiAssistanceEnabled] = useState<boolean>(true);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
 
   // Stats
@@ -136,6 +139,12 @@ export default function ResearchWorkspacePage() {
         onSelectProject={handleSelectProject}
         onOpenNewProjectModal={() => setIsNewProjectModalOpen(true)}
         user={user}
+        aiAssistanceEnabled={aiAssistanceEnabled}
+        onToggleAiAssistance={() => setAiAssistanceEnabled((prev) => !prev)}
+        onOpenChat={() => {
+          setStage('understand');
+          setSubView('chat');
+        }}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -148,6 +157,7 @@ export default function ResearchWorkspacePage() {
             setSubView(sv);
           }}
           stats={projectStats}
+          aiAssistanceEnabled={aiAssistanceEnabled}
         />
 
         {/* Main Work Area */}
@@ -169,6 +179,23 @@ export default function ResearchWorkspacePage() {
             </div>
 
             {/* Workflow Stage Views */}
+
+            {/* 0. DEDICATED PERSISTENT AI COPILOT */}
+            {subView === 'chat' && currentProject && (
+              <ResearchChatView
+                projectId={currentProject.id}
+                project={currentProject}
+                papers={papers}
+                initialPaperId={selectedChatPaperId || selectedAnalysisPaperId}
+                aiAssistanceEnabled={aiAssistanceEnabled}
+                onToggleAiAssistance={() => setAiAssistanceEnabled((prev) => !prev)}
+                onNavigateToNotes={() => {
+                  setStage('write');
+                  setSubView('notes');
+                }}
+              />
+            )}
+
             {/* 1. DISCOVER */}
             {subView === 'search' && (
               <AcademicSearch
@@ -196,6 +223,11 @@ export default function ResearchWorkspacePage() {
                 papers={papers}
                 onRefresh={refreshData}
                 onSelectPaperForAnalysis={handleSelectPaperForAnalysis}
+                onOpenCopilotForPaper={(pId) => {
+                  setSelectedChatPaperId(pId);
+                  setStage('understand');
+                  setSubView('chat');
+                }}
               />
             )}
             {subView === 'analysis' && (

@@ -30,9 +30,297 @@
       "fieldOfStudy": "Computational Linguistics",
       "createdAt": "2026-09-29T19:54:55.143Z",
       "updatedAt": "2026-09-29T19:54:55.143Z"
+    },
+    {
+      "id": "usr_test_1790716870612",
+      "name": "Dr. Alan Turing",
+      "email": "turing_1790716870612@cambridge.edu",
+      "passwordHash": "$2b$10$ezklkC1a6I3D62wmpBAhKeYjxcG10LRV7UavB5M0Ro463YTq4U9ai",
+      "institution": "University of Cambridge NLP Group",
+      "fieldOfStudy": "Computational Linguistics",
+      "createdAt": "2026-09-29T21:21:10.612Z",
+      "updatedAt": "2026-09-29T21:21:10.612Z"
+    },
+    {
+      "id": "usr_test_1790716887835",
+      "name": "Dr. Alan Turing",
+      "email": "turing_1790716887835@cambridge.edu",
+      "passwordHash": "$2b$10$TM/kKGGkf/SN.ANCqpHAPOVKnL00/YLU19S0Qm5AekDpgpHkGSw.y",
+      "institution": "University of Cambridge NLP Group",
+      "fieldOfStudy": "Computational Linguistics",
+      "createdAt": "2026-09-29T21:21:27.835Z",
+      "updatedAt": "2026-09-29T21:21:27.835Z"
+    },
+    {
+      "id": "usr_test_1790716927522",
+      "name": "Dr. Alan Turing",
+      "email": "turing_1790716927522@cambridge.edu",
+      "passwordHash": "$2b$10$h15Pql7xpRDhm0vHl1w6xO0qpkHoNKRatBH33nl5lpAUlPaWiQLXi",
+      "institution": "University of Cambridge NLP Group",
+      "fieldOfStudy": "Computational Linguistics",
+      "createdAt": "2026-09-29T21:22:07.522Z",
+      "updatedAt": "2026-09-29T21:22:07.522Z"
+    },
+    {
+      "id": "usr_test_1790716951031",
+      "name": "Dr. Alan Turing",
+      "email": "turing_1790716951031@cambridge.edu",
+      "passwordHash": "$2b$10$oCQ1pL9dpQmsQI6IQvJw8uc5jgeno5SMfQLHE7CfNfvHQSNPrtr/K",
+      "institution": "University of Cambridge NLP Group",
+      "fieldOfStudy": "Computational Linguistics",
+      "createdAt": "2026-09-29T21:22:31.031Z",
+      "updatedAt": "2026-09-29T21:22:31.031Z"
+    },
+    {
+      "id": "usr_test_1790716971981",
+      "name": "Dr. Alan Turing",
+      "email": "turing_1790716971981@cambridge.edu",
+      "passwordHash": "$2b$10$NuK4ecfeQHwWFdz4tHNx4O0DKbRgrmJZvY4DtpwPfa1IjDWzXYLHi",
+      "institution": "University of Cambridge NLP Group",
+      "fieldOfStudy": "Computational Linguistics",
+      "createdAt": "2026-09-29T21:22:51.981Z",
+      "updatedAt": "2026-09-29T21:22:51.981Z"
+    },
+    {
+      "id": "usr_test_1790717001599",
+      "name": "Dr. Alan Turing",
+      "email": "turing_1790717001599@cambridge.edu",
+      "passwordHash": "$2b$10$mTv42h9xJETzGAjLNaKweO8c879ZXgTbQ4LWCNDZflt0zydlfwN0C",
+      "institution": "University of Cambridge NLP Group",
+      "fieldOfStudy": "Computational Linguistics",
+      "createdAt": "2026-09-29T21:23:21.599Z",
+      "updatedAt": "2026-09-29T21:23:21.599Z"
+    },
+    {
+      "id": "usr_test_1790717036746",
+      "name": "Dr. Alan Turing",
+      "email": "turing_1790717036746@cambridge.edu",
+      "passwordHash": "$2b$10$UVHJr.PYBV/p9W9v18Y3juJxEzTia6X9DPrJpPCm5eR/IUNwcQHDy",
+      "institution": "University of Cambridge NLP Group",
+      "fieldOfStudy": "Computational Linguistics",
+      "createdAt": "2026-09-29T21:23:56.746Z",
+      "updatedAt": "2026-09-29T21:23:56.747Z"
+    },
+    {
+      "id": "usr_test_1790717297100",
+      "name": "Dr. Alan Turing",
+      "email": "turing_1790717297100@cambridge.edu",
+      "passwordHash": "$2b$10$VrpIoE0FGWvngkKIfLUngOoOuiEv2SzfwtP71gVeecqR.fvhT6JYO",
+      "institution": "University of Cambridge NLP Group",
+      "fieldOfStudy": "Computational Linguistics",
+      "createdAt": "2026-09-29T21:28:17.100Z",
+      "updatedAt": "2026-09-29T21:28:17.100Z"
     }
   ],
   "projects": [
+    {
+      "id": "proj_test_1790717297106",
+      "userId": "usr_test_1790717297100",
+      "title": "Bengali Dialectal Sentiment & Morphological Fragmentation",
+      "description": "End-to-end investigation into tokenization and subword regularizers.",
+      "researchField": "Computational Linguistics",
+      "researchQuestions": [
+        {
+          "id": "rq-test-1",
+          "question": "Does subword fragmentation increase on colloquial Chatgaiya verbs?",
+          "status": "active"
+        }
+      ],
+      "objectives": [
+        "Benchmark 4 transformer baselines on dialect corpus"
+      ],
+      "tags": [
+        "NLP",
+        "Dialects",
+        "Transformers"
+      ],
+      "createdAt": "2026-09-29T21:28:17.106Z",
+      "updatedAt": "2026-09-29T21:28:17.106Z"
+    },
+    {
+      "id": "proj_test_1790717036752",
+      "userId": "usr_test_1790717036746",
+      "title": "Bengali Dialectal Sentiment & Morphological Fragmentation",
+      "description": "End-to-end investigation into tokenization and subword regularizers.",
+      "researchField": "Computational Linguistics",
+      "researchQuestions": [
+        {
+          "id": "rq-test-1",
+          "question": "Does subword fragmentation increase on colloquial Chatgaiya verbs?",
+          "status": "active"
+        }
+      ],
+      "objectives": [
+        "Benchmark 4 transformer baselines on dialect corpus"
+      ],
+      "tags": [
+        "NLP",
+        "Dialects",
+        "Transformers"
+      ],
+      "createdAt": "2026-09-29T21:23:56.752Z",
+      "updatedAt": "2026-09-29T21:23:56.752Z"
+    },
+    {
+      "id": "proj_test_1790717001604",
+      "userId": "usr_test_1790717001599",
+      "title": "Bengali Dialectal Sentiment & Morphological Fragmentation",
+      "description": "End-to-end investigation into tokenization and subword regularizers.",
+      "researchField": "Computational Linguistics",
+      "researchQuestions": [
+        {
+          "id": "rq-test-1",
+          "question": "Does subword fragmentation increase on colloquial Chatgaiya verbs?",
+          "status": "active"
+        }
+      ],
+      "objectives": [
+        "Benchmark 4 transformer baselines on dialect corpus"
+      ],
+      "tags": [
+        "NLP",
+        "Dialects",
+        "Transformers"
+      ],
+      "createdAt": "2026-09-29T21:23:21.604Z",
+      "updatedAt": "2026-09-29T21:23:21.604Z"
+    },
+    {
+      "id": "proj_test_1790716971986",
+      "userId": "usr_test_1790716971981",
+      "title": "Bengali Dialectal Sentiment & Morphological Fragmentation",
+      "description": "End-to-end investigation into tokenization and subword regularizers.",
+      "researchField": "Computational Linguistics",
+      "researchQuestions": [
+        {
+          "id": "rq-test-1",
+          "question": "Does subword fragmentation increase on colloquial Chatgaiya verbs?",
+          "status": "active"
+        }
+      ],
+      "objectives": [
+        "Benchmark 4 transformer baselines on dialect corpus"
+      ],
+      "tags": [
+        "NLP",
+        "Dialects",
+        "Transformers"
+      ],
+      "createdAt": "2026-09-29T21:22:51.986Z",
+      "updatedAt": "2026-09-29T21:22:51.986Z"
+    },
+    {
+      "id": "proj_test_1790716951037",
+      "userId": "usr_test_1790716951031",
+      "title": "Bengali Dialectal Sentiment & Morphological Fragmentation",
+      "description": "End-to-end investigation into tokenization and subword regularizers.",
+      "researchField": "Computational Linguistics",
+      "researchQuestions": [
+        {
+          "id": "rq-test-1",
+          "question": "Does subword fragmentation increase on colloquial Chatgaiya verbs?",
+          "status": "active"
+        }
+      ],
+      "objectives": [
+        "Benchmark 4 transformer baselines on dialect corpus"
+      ],
+      "tags": [
+        "NLP",
+        "Dialects",
+        "Transformers"
+      ],
+      "createdAt": "2026-09-29T21:22:31.037Z",
+      "updatedAt": "2026-09-29T21:22:31.037Z"
+    },
+    {
+      "id": "proj_test_1790716927528",
+      "userId": "usr_test_1790716927522",
+      "title": "Bengali Dialectal Sentiment & Morphological Fragmentation",
+      "description": "End-to-end investigation into tokenization and subword regularizers.",
+      "researchField": "Computational Linguistics",
+      "researchQuestions": [
+        {
+          "id": "rq-test-1",
+          "question": "Does subword fragmentation increase on colloquial Chatgaiya verbs?",
+          "status": "active"
+        }
+      ],
+      "objectives": [
+        "Benchmark 4 transformer baselines on dialect corpus"
+      ],
+      "tags": [
+        "NLP",
+        "Dialects",
+        "Transformers"
+      ],
+      "createdAt": "2026-09-29T21:22:07.528Z",
+      "updatedAt": "2026-09-29T21:22:07.528Z"
+    },
+    {
+      "id": "proj_test_1790716887841",
+      "userId": "usr_test_1790716887835",
+      "title": "Bengali Dialectal Sentiment & Morphological Fragmentation",
+      "description": "End-to-end investigation into tokenization and subword regularizers.",
+      "researchField": "Computational Linguistics",
+      "researchQuestions": [
+        {
+          "id": "rq-test-1",
+          "question": "Does subword fragmentation increase on colloquial Chatgaiya verbs?",
+          "status": "active"
+        }
+      ],
+      "objectives": [
+        "Benchmark 4 transformer baselines on dialect corpus"
+      ],
+      "tags": [
+        "NLP",
+        "Dialects",
+        "Transformers"
+      ],
+      "createdAt": "2026-09-29T21:21:27.841Z",
+      "updatedAt": "2026-09-29T21:21:27.841Z"
+    },
+    {
+      "id": "proj_test_1790716870645",
+      "userId": "usr_test_1790716870612",
+      "title": "Bengali Dialectal Sentiment & Morphological Fragmentation",
+      "description": "End-to-end investigation into tokenization and subword regularizers.",
+      "researchField": "Computational Linguistics",
+      "researchQuestions": [
+        {
+          "id": "rq-test-1",
+          "question": "Does subword fragmentation increase on colloquial Chatgaiya verbs?",
+          "status": "active"
+        }
+      ],
+      "objectives": [
+        "Benchmark 4 transformer baselines on dialect corpus"
+      ],
+      "tags": [
+        "NLP",
+        "Dialects",
+        "Transformers"
+      ],
+      "createdAt": "2026-09-29T21:21:10.645Z",
+      "updatedAt": "2026-09-29T21:21:10.645Z"
+    },
+    {
+      "id": "proj_1790714922715_3ubm",
+      "userId": "usr_demo_researcher_01",
+      "title": "kmpmr",
+      "description": "",
+      "researchField": "Computational Linguistics & NLP",
+      "researchQuestions": [],
+      "objectives": [],
+      "tags": [
+        "NLP",
+        "Low-Resource",
+        "Transformers"
+      ],
+      "createdAt": "2026-09-29T20:48:42.715Z",
+      "updatedAt": "2026-09-29T20:48:42.715Z"
+    },
     {
       "id": "proj_test_1790711695149",
       "userId": "usr_test_1790711695143",
@@ -137,6 +425,217 @@
     }
   ],
   "papers": [
+    {
+      "id": "paper_test_1790717298211",
+      "projectId": "proj_test_1790717297106",
+      "doi": "10.1016/demo.chatgaiya.test",
+      "title": "[DEMO PAPER — NOT A REAL PUBLICATION] Dialectal Morphological Regularization",
+      "authors": [
+        "Rahman, T.",
+        "Hossain, M."
+      ],
+      "abstract": "We test phonetic regularization on dialectal tokenization.",
+      "publicationYear": 2024,
+      "journalOrConference": "Indic NLP 2024",
+      "url": "https://doi.org/10.1016/demo.chatgaiya.test",
+      "citationCount": 15,
+      "sourceProvider": "demo",
+      "sourceId": "demo-test",
+      "references": [],
+      "retrievalDate": "2026-09-29T21:28:18.211Z",
+      "metadataStatus": "verified",
+      "retractionStatus": "clean",
+      "processingStatus": "ready",
+      "createdAt": "2026-09-29T21:28:18.211Z"
+    },
+    {
+      "id": "paper_test_1790717037835",
+      "projectId": "proj_test_1790717036752",
+      "doi": "10.1016/demo.chatgaiya.test",
+      "title": "[DEMO PAPER — NOT A REAL PUBLICATION] Dialectal Morphological Regularization",
+      "authors": [
+        "Rahman, T.",
+        "Hossain, M."
+      ],
+      "abstract": "We test phonetic regularization on dialectal tokenization.",
+      "publicationYear": 2024,
+      "journalOrConference": "Indic NLP 2024",
+      "url": "https://doi.org/10.1016/demo.chatgaiya.test",
+      "citationCount": 15,
+      "sourceProvider": "demo",
+      "sourceId": "demo-test",
+      "references": [],
+      "retrievalDate": "2026-09-29T21:23:57.835Z",
+      "metadataStatus": "verified",
+      "retractionStatus": "clean",
+      "processingStatus": "ready",
+      "createdAt": "2026-09-29T21:23:57.835Z"
+    },
+    {
+      "id": "paper_test_1790717002682",
+      "projectId": "proj_test_1790717001604",
+      "doi": "10.1016/demo.chatgaiya.test",
+      "title": "[DEMO PAPER — NOT A REAL PUBLICATION] Dialectal Morphological Regularization",
+      "authors": [
+        "Rahman, T.",
+        "Hossain, M."
+      ],
+      "abstract": "We test phonetic regularization on dialectal tokenization.",
+      "publicationYear": 2024,
+      "journalOrConference": "Indic NLP 2024",
+      "url": "https://doi.org/10.1016/demo.chatgaiya.test",
+      "citationCount": 15,
+      "sourceProvider": "demo",
+      "sourceId": "demo-test",
+      "references": [],
+      "retrievalDate": "2026-09-29T21:23:22.682Z",
+      "metadataStatus": "verified",
+      "retractionStatus": "clean",
+      "processingStatus": "ready",
+      "createdAt": "2026-09-29T21:23:22.682Z"
+    },
+    {
+      "id": "paper_test_1790716973058",
+      "projectId": "proj_test_1790716971986",
+      "doi": "10.1016/demo.chatgaiya.test",
+      "title": "[DEMO PAPER — NOT A REAL PUBLICATION] Dialectal Morphological Regularization",
+      "authors": [
+        "Rahman, T.",
+        "Hossain, M."
+      ],
+      "abstract": "We test phonetic regularization on dialectal tokenization.",
+      "publicationYear": 2024,
+      "journalOrConference": "Indic NLP 2024",
+      "url": "https://doi.org/10.1016/demo.chatgaiya.test",
+      "citationCount": 15,
+      "sourceProvider": "demo",
+      "sourceId": "demo-test",
+      "references": [],
+      "retrievalDate": "2026-09-29T21:22:53.058Z",
+      "metadataStatus": "verified",
+      "retractionStatus": "clean",
+      "processingStatus": "ready",
+      "createdAt": "2026-09-29T21:22:53.058Z"
+    },
+    {
+      "id": "paper_test_1790716952425",
+      "projectId": "proj_test_1790716951037",
+      "doi": "10.1016/demo.chatgaiya.test",
+      "title": "[DEMO PAPER — NOT A REAL PUBLICATION] Dialectal Morphological Regularization",
+      "authors": [
+        "Rahman, T.",
+        "Hossain, M."
+      ],
+      "abstract": "We test phonetic regularization on dialectal tokenization.",
+      "publicationYear": 2024,
+      "journalOrConference": "Indic NLP 2024",
+      "url": "https://doi.org/10.1016/demo.chatgaiya.test",
+      "citationCount": 15,
+      "sourceProvider": "demo",
+      "sourceId": "demo-test",
+      "references": [],
+      "retrievalDate": "2026-09-29T21:22:32.425Z",
+      "metadataStatus": "verified",
+      "retractionStatus": "clean",
+      "processingStatus": "ready",
+      "createdAt": "2026-09-29T21:22:32.425Z"
+    },
+    {
+      "id": "paper_test_1790716928485",
+      "projectId": "proj_test_1790716927528",
+      "doi": "10.1016/demo.chatgaiya.test",
+      "title": "[DEMO PAPER — NOT A REAL PUBLICATION] Dialectal Morphological Regularization",
+      "authors": [
+        "Rahman, T.",
+        "Hossain, M."
+      ],
+      "abstract": "We test phonetic regularization on dialectal tokenization.",
+      "publicationYear": 2024,
+      "journalOrConference": "Indic NLP 2024",
+      "url": "https://doi.org/10.1016/demo.chatgaiya.test",
+      "citationCount": 15,
+      "sourceProvider": "demo",
+      "sourceId": "demo-test",
+      "references": [],
+      "retrievalDate": "2026-09-29T21:22:08.485Z",
+      "metadataStatus": "verified",
+      "retractionStatus": "clean",
+      "processingStatus": "ready",
+      "createdAt": "2026-09-29T21:22:08.485Z"
+    },
+    {
+      "id": "paper_test_1790716888902",
+      "projectId": "proj_test_1790716887841",
+      "doi": "10.1016/demo.chatgaiya.test",
+      "title": "[DEMO PAPER — NOT A REAL PUBLICATION] Dialectal Morphological Regularization",
+      "authors": [
+        "Rahman, T.",
+        "Hossain, M."
+      ],
+      "abstract": "We test phonetic regularization on dialectal tokenization.",
+      "publicationYear": 2024,
+      "journalOrConference": "Indic NLP 2024",
+      "url": "https://doi.org/10.1016/demo.chatgaiya.test",
+      "citationCount": 15,
+      "sourceProvider": "demo",
+      "sourceId": "demo-test",
+      "references": [],
+      "retrievalDate": "2026-09-29T21:21:28.902Z",
+      "metadataStatus": "verified",
+      "retractionStatus": "clean",
+      "processingStatus": "ready",
+      "createdAt": "2026-09-29T21:21:28.902Z"
+    },
+    {
+      "id": "paper_test_1790716871994",
+      "projectId": "proj_test_1790716870645",
+      "doi": "10.1016/demo.chatgaiya.test",
+      "title": "[DEMO PAPER — NOT A REAL PUBLICATION] Dialectal Morphological Regularization",
+      "authors": [
+        "Rahman, T.",
+        "Hossain, M."
+      ],
+      "abstract": "We test phonetic regularization on dialectal tokenization.",
+      "publicationYear": 2024,
+      "journalOrConference": "Indic NLP 2024",
+      "url": "https://doi.org/10.1016/demo.chatgaiya.test",
+      "citationCount": 15,
+      "sourceProvider": "demo",
+      "sourceId": "demo-test",
+      "references": [],
+      "retrievalDate": "2026-09-29T21:21:11.994Z",
+      "metadataStatus": "verified",
+      "retractionStatus": "clean",
+      "processingStatus": "ready",
+      "createdAt": "2026-09-29T21:21:11.994Z"
+    },
+    {
+      "id": "paper-1790714888215-m4sg",
+      "projectId": "proj_chatgaiya_sentiment_01",
+      "doi": "10.1145/3810987.3815534",
+      "title": "TigXMM: A Multimodal Cross-Lingual Transfer LLM Method for Low-Resource Sentiment Analysis",
+      "authors": [
+        "Gebremeskel, Hagos Gebremedhin",
+        "Feng, Chong",
+        "Abera, Asefa Mebrahtu",
+        "Zhao, Xuan"
+      ],
+      "abstract": "No abstract provided in Crossref registry for this publication record.",
+      "publicationYear": 2026,
+      "journalOrConference": "Proceedings of the 7th International Workshop on Intelligent Cross-Data Analysis  and Retrieval",
+      "url": "https://doi.org/10.1145/3810987.3815534",
+      "openAccessUrl": "https://dl.acm.org/doi/pdf/10.1145/3810987.3815534",
+      "citationCount": 0,
+      "sourceProvider": "crossref",
+      "sourceId": "10.1145/3810987.3815534",
+      "references": [],
+      "retrievalDate": "2026-09-29T20:48:08.215Z",
+      "metadataStatus": "verified",
+      "retractionStatus": "clean",
+      "processingStatus": "ready",
+      "isDemo": false,
+      "createdAt": "2026-09-29T20:48:08.215Z"
+    },
     {
       "id": "paper_test_1790711696204",
       "projectId": "proj_test_1790711695149",
@@ -451,6 +950,134 @@
       "sectionName": "Results",
       "chunkIndex": 1,
       "content": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%."
+    },
+    {
+      "id": "chunk_paper_test_1790716871994_1",
+      "paperId": "paper_test_1790716871994",
+      "pageNumber": 6,
+      "sectionName": "Methodology",
+      "chunkIndex": 0,
+      "content": "We selected XLM-R because its 250,000 SentencePiece subword vocabulary provides broad Indic phoneme cluster coverage."
+    },
+    {
+      "id": "chunk_paper_test_1790716871994_2",
+      "paperId": "paper_test_1790716871994",
+      "pageNumber": 8,
+      "sectionName": "Results",
+      "chunkIndex": 1,
+      "content": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%."
+    },
+    {
+      "id": "chunk_paper_test_1790716888902_1",
+      "paperId": "paper_test_1790716888902",
+      "pageNumber": 6,
+      "sectionName": "Methodology",
+      "chunkIndex": 0,
+      "content": "We selected XLM-R because its 250,000 SentencePiece subword vocabulary provides broad Indic phoneme cluster coverage."
+    },
+    {
+      "id": "chunk_paper_test_1790716888902_2",
+      "paperId": "paper_test_1790716888902",
+      "pageNumber": 8,
+      "sectionName": "Results",
+      "chunkIndex": 1,
+      "content": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%."
+    },
+    {
+      "id": "chunk_paper_test_1790716928485_1",
+      "paperId": "paper_test_1790716928485",
+      "pageNumber": 6,
+      "sectionName": "Methodology",
+      "chunkIndex": 0,
+      "content": "We selected XLM-R because its 250,000 SentencePiece subword vocabulary provides broad Indic phoneme cluster coverage."
+    },
+    {
+      "id": "chunk_paper_test_1790716928485_2",
+      "paperId": "paper_test_1790716928485",
+      "pageNumber": 8,
+      "sectionName": "Results",
+      "chunkIndex": 1,
+      "content": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%."
+    },
+    {
+      "id": "chunk_paper_test_1790716952425_1",
+      "paperId": "paper_test_1790716952425",
+      "pageNumber": 6,
+      "sectionName": "Methodology",
+      "chunkIndex": 0,
+      "content": "We selected XLM-R because its 250,000 SentencePiece subword vocabulary provides broad Indic phoneme cluster coverage."
+    },
+    {
+      "id": "chunk_paper_test_1790716952425_2",
+      "paperId": "paper_test_1790716952425",
+      "pageNumber": 8,
+      "sectionName": "Results",
+      "chunkIndex": 1,
+      "content": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%."
+    },
+    {
+      "id": "chunk_paper_test_1790716973058_1",
+      "paperId": "paper_test_1790716973058",
+      "pageNumber": 6,
+      "sectionName": "Methodology",
+      "chunkIndex": 0,
+      "content": "We selected XLM-R because its 250,000 SentencePiece subword vocabulary provides broad Indic phoneme cluster coverage."
+    },
+    {
+      "id": "chunk_paper_test_1790716973058_2",
+      "paperId": "paper_test_1790716973058",
+      "pageNumber": 8,
+      "sectionName": "Results",
+      "chunkIndex": 1,
+      "content": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%."
+    },
+    {
+      "id": "chunk_paper_test_1790717002682_1",
+      "paperId": "paper_test_1790717002682",
+      "pageNumber": 6,
+      "sectionName": "Methodology",
+      "chunkIndex": 0,
+      "content": "We selected XLM-R because its 250,000 SentencePiece subword vocabulary provides broad Indic phoneme cluster coverage."
+    },
+    {
+      "id": "chunk_paper_test_1790717002682_2",
+      "paperId": "paper_test_1790717002682",
+      "pageNumber": 8,
+      "sectionName": "Results",
+      "chunkIndex": 1,
+      "content": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%."
+    },
+    {
+      "id": "chunk_paper_test_1790717037835_1",
+      "paperId": "paper_test_1790717037835",
+      "pageNumber": 6,
+      "sectionName": "Methodology",
+      "chunkIndex": 0,
+      "content": "We selected XLM-R because its 250,000 SentencePiece subword vocabulary provides broad Indic phoneme cluster coverage."
+    },
+    {
+      "id": "chunk_paper_test_1790717037835_2",
+      "paperId": "paper_test_1790717037835",
+      "pageNumber": 8,
+      "sectionName": "Results",
+      "chunkIndex": 1,
+      "content": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%."
+    },
+    {
+      "id": "chunk_paper_test_1790717298211_1",
+      "paperId": "paper_test_1790717298211",
+      "pageNumber": 6,
+      "sectionName": "Methodology",
+      "chunkIndex": 0,
+      "content": "We selected XLM-R because its 250,000 SentencePiece subword vocabulary provides broad Indic phoneme cluster coverage."
+    },
+    {
+      "id": "chunk_paper_test_1790717298211_2",
+      "paperId": "paper_test_1790717298211",
+      "pageNumber": 8,
+      "sectionName": "Results",
+      "chunkIndex": 1,
+      "content": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%."
     }
   ],
   "analysis": [
@@ -668,9 +1295,288 @@
       "customColumns": {
         "Compute Hours": "2.4 hrs A100"
       }
+    },
+    {
+      "id": "mat-paper-1790714888215-m4sg",
+      "projectId": "proj_chatgaiya_sentiment_01",
+      "paperId": "paper-1790714888215-m4sg",
+      "paperTitle": "TigXMM: A Multimodal Cross-Lingual Transfer LLM Method for Low-Resource Sentiment Analysis",
+      "year": 2026,
+      "dataset": "Pending extraction",
+      "model": "Pending extraction",
+      "language": "Multilingual / English",
+      "method": "Empirical Investigation",
+      "metric": "Macro-F1 / Accuracy",
+      "result": "Pending full-text synthesis",
+      "limitation": "Pending review",
+      "customColumns": {}
+    },
+    {
+      "id": "mat_paper_test_1790716871994",
+      "projectId": "proj_test_1790716870645",
+      "paperId": "paper_test_1790716871994",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "year": 2024,
+      "dataset": "CSC-24 (4,200 utterances)",
+      "model": "XLM-R + Phonetic Reg",
+      "language": "Chatgaiya",
+      "method": "Phonetic subword regularization",
+      "metric": "Macro-F1: 84.1%",
+      "result": "+4.9% F1 over mBERT",
+      "limitation": "Script restricted; excludes Romanized Banglish",
+      "customColumns": {
+        "Compute Hours": "2.4 hrs A100"
+      }
+    },
+    {
+      "id": "mat_paper_test_1790716888902",
+      "projectId": "proj_test_1790716887841",
+      "paperId": "paper_test_1790716888902",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "year": 2024,
+      "dataset": "CSC-24 (4,200 utterances)",
+      "model": "XLM-R + Phonetic Reg",
+      "language": "Chatgaiya",
+      "method": "Phonetic subword regularization",
+      "metric": "Macro-F1: 84.1%",
+      "result": "+4.9% F1 over mBERT",
+      "limitation": "Script restricted; excludes Romanized Banglish",
+      "customColumns": {
+        "Compute Hours": "2.4 hrs A100"
+      }
+    },
+    {
+      "id": "mat_paper_test_1790716928485",
+      "projectId": "proj_test_1790716927528",
+      "paperId": "paper_test_1790716928485",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "year": 2024,
+      "dataset": "CSC-24 (4,200 utterances)",
+      "model": "XLM-R + Phonetic Reg",
+      "language": "Chatgaiya",
+      "method": "Phonetic subword regularization",
+      "metric": "Macro-F1: 84.1%",
+      "result": "+4.9% F1 over mBERT",
+      "limitation": "Script restricted; excludes Romanized Banglish",
+      "customColumns": {
+        "Compute Hours": "2.4 hrs A100"
+      }
+    },
+    {
+      "id": "mat_paper_test_1790716952425",
+      "projectId": "proj_test_1790716951037",
+      "paperId": "paper_test_1790716952425",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "year": 2024,
+      "dataset": "CSC-24 (4,200 utterances)",
+      "model": "XLM-R + Phonetic Reg",
+      "language": "Chatgaiya",
+      "method": "Phonetic subword regularization",
+      "metric": "Macro-F1: 84.1%",
+      "result": "+4.9% F1 over mBERT",
+      "limitation": "Script restricted; excludes Romanized Banglish",
+      "customColumns": {
+        "Compute Hours": "2.4 hrs A100"
+      }
+    },
+    {
+      "id": "mat_paper_test_1790716973058",
+      "projectId": "proj_test_1790716971986",
+      "paperId": "paper_test_1790716973058",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "year": 2024,
+      "dataset": "CSC-24 (4,200 utterances)",
+      "model": "XLM-R + Phonetic Reg",
+      "language": "Chatgaiya",
+      "method": "Phonetic subword regularization",
+      "metric": "Macro-F1: 84.1%",
+      "result": "+4.9% F1 over mBERT",
+      "limitation": "Script restricted; excludes Romanized Banglish",
+      "customColumns": {
+        "Compute Hours": "2.4 hrs A100"
+      }
+    },
+    {
+      "id": "mat_paper_test_1790717002682",
+      "projectId": "proj_test_1790717001604",
+      "paperId": "paper_test_1790717002682",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "year": 2024,
+      "dataset": "CSC-24 (4,200 utterances)",
+      "model": "XLM-R + Phonetic Reg",
+      "language": "Chatgaiya",
+      "method": "Phonetic subword regularization",
+      "metric": "Macro-F1: 84.1%",
+      "result": "+4.9% F1 over mBERT",
+      "limitation": "Script restricted; excludes Romanized Banglish",
+      "customColumns": {
+        "Compute Hours": "2.4 hrs A100"
+      }
+    },
+    {
+      "id": "mat_paper_test_1790717037835",
+      "projectId": "proj_test_1790717036752",
+      "paperId": "paper_test_1790717037835",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "year": 2024,
+      "dataset": "CSC-24 (4,200 utterances)",
+      "model": "XLM-R + Phonetic Reg",
+      "language": "Chatgaiya",
+      "method": "Phonetic subword regularization",
+      "metric": "Macro-F1: 84.1%",
+      "result": "+4.9% F1 over mBERT",
+      "limitation": "Script restricted; excludes Romanized Banglish",
+      "customColumns": {
+        "Compute Hours": "2.4 hrs A100"
+      }
+    },
+    {
+      "id": "mat_paper_test_1790717298211",
+      "projectId": "proj_test_1790717297106",
+      "paperId": "paper_test_1790717298211",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "year": 2024,
+      "dataset": "CSC-24 (4,200 utterances)",
+      "model": "XLM-R + Phonetic Reg",
+      "language": "Chatgaiya",
+      "method": "Phonetic subword regularization",
+      "metric": "Macro-F1: 84.1%",
+      "result": "+4.9% F1 over mBERT",
+      "limitation": "Script restricted; excludes Romanized Banglish",
+      "customColumns": {
+        "Compute Hours": "2.4 hrs A100"
+      }
     }
   ],
   "evidence": [
+    {
+      "id": "ev_test_1790717298216",
+      "projectId": "proj_test_1790717297106",
+      "paperId": "paper_test_1790717298211",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "claim": "XLM-R outperformed mBERT by 4.9% Macro-F1 on dialect test set",
+      "page": 8,
+      "section": "Results",
+      "snippet": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.",
+      "evidenceType": "empirical",
+      "confidence": 0.98,
+      "verificationStatus": "supported",
+      "location": "Results → Table 4 → Page 8",
+      "createdBy": "Dr. Alan Turing",
+      "createdAt": "2026-09-29T21:28:18.216Z"
+    },
+    {
+      "id": "ev_test_1790717037839",
+      "projectId": "proj_test_1790717036752",
+      "paperId": "paper_test_1790717037835",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "claim": "XLM-R outperformed mBERT by 4.9% Macro-F1 on dialect test set",
+      "page": 8,
+      "section": "Results",
+      "snippet": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.",
+      "evidenceType": "empirical",
+      "confidence": 0.98,
+      "verificationStatus": "supported",
+      "location": "Results → Table 4 → Page 8",
+      "createdBy": "Dr. Alan Turing",
+      "createdAt": "2026-09-29T21:23:57.839Z"
+    },
+    {
+      "id": "ev_test_1790717002686",
+      "projectId": "proj_test_1790717001604",
+      "paperId": "paper_test_1790717002682",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "claim": "XLM-R outperformed mBERT by 4.9% Macro-F1 on dialect test set",
+      "page": 8,
+      "section": "Results",
+      "snippet": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.",
+      "evidenceType": "empirical",
+      "confidence": 0.98,
+      "verificationStatus": "supported",
+      "location": "Results → Table 4 → Page 8",
+      "createdBy": "Dr. Alan Turing",
+      "createdAt": "2026-09-29T21:23:22.686Z"
+    },
+    {
+      "id": "ev_test_1790716973062",
+      "projectId": "proj_test_1790716971986",
+      "paperId": "paper_test_1790716973058",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "claim": "XLM-R outperformed mBERT by 4.9% Macro-F1 on dialect test set",
+      "page": 8,
+      "section": "Results",
+      "snippet": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.",
+      "evidenceType": "empirical",
+      "confidence": 0.98,
+      "verificationStatus": "supported",
+      "location": "Results → Table 4 → Page 8",
+      "createdBy": "Dr. Alan Turing",
+      "createdAt": "2026-09-29T21:22:53.062Z"
+    },
+    {
+      "id": "ev_test_1790716952430",
+      "projectId": "proj_test_1790716951037",
+      "paperId": "paper_test_1790716952425",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "claim": "XLM-R outperformed mBERT by 4.9% Macro-F1 on dialect test set",
+      "page": 8,
+      "section": "Results",
+      "snippet": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.",
+      "evidenceType": "empirical",
+      "confidence": 0.98,
+      "verificationStatus": "supported",
+      "location": "Results → Table 4 → Page 8",
+      "createdBy": "Dr. Alan Turing",
+      "createdAt": "2026-09-29T21:22:32.430Z"
+    },
+    {
+      "id": "ev_test_1790716928488",
+      "projectId": "proj_test_1790716927528",
+      "paperId": "paper_test_1790716928485",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "claim": "XLM-R outperformed mBERT by 4.9% Macro-F1 on dialect test set",
+      "page": 8,
+      "section": "Results",
+      "snippet": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.",
+      "evidenceType": "empirical",
+      "confidence": 0.98,
+      "verificationStatus": "supported",
+      "location": "Results → Table 4 → Page 8",
+      "createdBy": "Dr. Alan Turing",
+      "createdAt": "2026-09-29T21:22:08.488Z"
+    },
+    {
+      "id": "ev_test_1790716888906",
+      "projectId": "proj_test_1790716887841",
+      "paperId": "paper_test_1790716888902",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "claim": "XLM-R outperformed mBERT by 4.9% Macro-F1 on dialect test set",
+      "page": 8,
+      "section": "Results",
+      "snippet": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.",
+      "evidenceType": "empirical",
+      "confidence": 0.98,
+      "verificationStatus": "supported",
+      "location": "Results → Table 4 → Page 8",
+      "createdBy": "Dr. Alan Turing",
+      "createdAt": "2026-09-29T21:21:28.906Z"
+    },
+    {
+      "id": "ev_test_1790716871997",
+      "projectId": "proj_test_1790716870645",
+      "paperId": "paper_test_1790716871994",
+      "paperTitle": "Dialectal Morphological Regularization",
+      "claim": "XLM-R outperformed mBERT by 4.9% Macro-F1 on dialect test set",
+      "page": 8,
+      "section": "Results",
+      "snippet": "As shown in Table 4, XLM-R with phonetic regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.",
+      "evidenceType": "empirical",
+      "confidence": 0.98,
+      "verificationStatus": "supported",
+      "location": "Results → Table 4 → Page 8",
+      "createdBy": "Dr. Alan Turing",
+      "createdAt": "2026-09-29T21:21:11.997Z"
+    },
     {
       "id": "ev_test_1790711696207",
       "projectId": "proj_test_1790711695149",
@@ -1154,6 +2060,58 @@
       },
       "fullTextReviewed": true,
       "reviewerNotes": "Benchmark for cross-lingual transfer deficit."
+    }
+  ],
+  "chatSessions": [
+    {
+      "id": "session-demo-01",
+      "projectId": "proj_chatgaiya_sentiment_01",
+      "title": "Subword Tokenization & Model Disagreement Analysis",
+      "scope": "project",
+      "createdAt": "2026-09-27T21:21:09.940Z",
+      "updatedAt": "2026-09-28T21:21:09.940Z"
+    }
+  ],
+  "chatMessages": [
+    {
+      "id": "msg-demo-1",
+      "sessionId": "session-demo-01",
+      "role": "user",
+      "content": "Why do Paper 1 (Rahman et al.) and Paper 2 (Karim et al.) disagree on whether XLM-R or BanglaBERT performs better on regional dialect sentiment?",
+      "createdAt": "2026-09-27T21:21:09.940Z"
+    },
+    {
+      "id": "msg-demo-2",
+      "sessionId": "session-demo-01",
+      "role": "assistant",
+      "content": "Based on a cross-paper analysis of your library, the empirical disagreement between Rahman et al. (2024) and Karim et al. (2023) stems from three critical methodological divergences:\n\n### 1. Preprocessing & Vocabulary Regularization\n* **Rahman et al. (2024)** applied **phonetic-aware subword regularization** with lattice dropout (alpha=0.1). This directly alleviated SentencePiece subword fragmentation, enabling XLM-RoBERTa to achieve **84.1% Macro-F1**.\n* **Karim et al. (2023)** did not use subword dropout; instead, they employed a **static slang normalization dictionary** prior to WordPiece tokenization. Under static normalization without subword sampling, **BanglaBERT (81.3% Macro-F1)** outperformed standard unregularized XLM-R (79.2% Macro-F1) because monolingual pre-training better preserved dialect root morphemes.\n\n### 2. Dataset Differences\n* Rahman et al. evaluated on **CSC-24** (4,200 curated Chittagonian comments annotated by native linguists).\n* Karim et al. evaluated on **CRBC-23** (a broader multi-divisional regional corpus with mixed colloquial text).\n\n### Summary Distinction\n* **Source-Grounded Finding**: XLM-R outperforms monolingual baselines **only when subword regularization is active**. Without regularization, monolingual BanglaBERT retains dialect morphology more robustly.\n* **AI Interpretation**: The tokenizer lattice dropout acts as a crucial regularizer against dialectal spelling drift.",
+      "sources": [
+        {
+          "paperId": "paper-demo-01",
+          "paperTitle": "Evaluating Multilingual Transformers on Chittagonian Dialectal Sentiment",
+          "page": 8,
+          "section": "Results & Evaluation",
+          "snippet": "As reported in Table 4, XLM-R with phonetic subword regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.",
+          "sourceType": "paper_chunk",
+          "similarityScore": 94
+        },
+        {
+          "paperId": "paper-demo-02",
+          "paperTitle": "BanglaBERT vs XLM-R: Comparative Analysis in Regional Bengali Social Sentiment",
+          "page": 7,
+          "section": "Results & Discussion",
+          "snippet": "Contrary to prior studies favoring massive multilingual models, BanglaBERT achieved 81.3% Macro-F1 compared to 79.2% for XLM-R when text was pre-normalized.",
+          "sourceType": "paper_chunk",
+          "similarityScore": 91
+        },
+        {
+          "sourceType": "contradiction",
+          "snippet": "Documented Contradiction Record: Multilingual vs Monolingual Transformer Superiority on Dialectal Text",
+          "similarityScore": 96
+        }
+      ],
+      "interpretationNotes": "The superiority depends on preprocessing: subword regularization benefits multilingual models disproportionately by overcoming out-of-vocabulary splits.",
+      "createdAt": "2026-09-27T21:21:24.940Z"
     }
   ]
 }

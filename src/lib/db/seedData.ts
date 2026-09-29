@@ -12,6 +12,8 @@ import {
   ResearchNote,
   MLExperiment,
   SystematicReviewItem,
+  ChatSession,
+  ChatMessage,
 } from './types';
 import bcrypt from 'bcryptjs';
 
@@ -911,5 +913,71 @@ export const initialSystematicReview: SystematicReviewItem[] = [
     },
     fullTextReviewed: true,
     reviewerNotes: 'Benchmark for cross-lingual transfer deficit.',
+  },
+];
+
+export const initialChatSessions: ChatSession[] = [
+  {
+    id: 'session-demo-01',
+    projectId: DEMO_PROJECT_ID,
+    title: 'Subword Tokenization & Model Disagreement Analysis',
+    scope: 'project',
+    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+  },
+];
+
+export const initialChatMessages: ChatMessage[] = [
+  {
+    id: 'msg-demo-1',
+    sessionId: 'session-demo-01',
+    role: 'user',
+    content: 'Why do Paper 1 (Rahman et al.) and Paper 2 (Karim et al.) disagree on whether XLM-R or BanglaBERT performs better on regional dialect sentiment?',
+    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+  {
+    id: 'msg-demo-2',
+    sessionId: 'session-demo-01',
+    role: 'assistant',
+    content: `Based on a cross-paper analysis of your library, the empirical disagreement between Rahman et al. (2024) and Karim et al. (2023) stems from three critical methodological divergences:
+
+### 1. Preprocessing & Vocabulary Regularization
+* **Rahman et al. (2024)** applied **phonetic-aware subword regularization** with lattice dropout (alpha=0.1). This directly alleviated SentencePiece subword fragmentation, enabling XLM-RoBERTa to achieve **84.1% Macro-F1**.
+* **Karim et al. (2023)** did not use subword dropout; instead, they employed a **static slang normalization dictionary** prior to WordPiece tokenization. Under static normalization without subword sampling, **BanglaBERT (81.3% Macro-F1)** outperformed standard unregularized XLM-R (79.2% Macro-F1) because monolingual pre-training better preserved dialect root morphemes.
+
+### 2. Dataset Differences
+* Rahman et al. evaluated on **CSC-24** (4,200 curated Chittagonian comments annotated by native linguists).
+* Karim et al. evaluated on **CRBC-23** (a broader multi-divisional regional corpus with mixed colloquial text).
+
+### Summary Distinction
+* **Source-Grounded Finding**: XLM-R outperforms monolingual baselines **only when subword regularization is active**. Without regularization, monolingual BanglaBERT retains dialect morphology more robustly.
+* **AI Interpretation**: The tokenizer lattice dropout acts as a crucial regularizer against dialectal spelling drift.`,
+    sources: [
+      {
+        paperId: 'paper-demo-01',
+        paperTitle: 'Evaluating Multilingual Transformers on Chittagonian Dialectal Sentiment',
+        page: 8,
+        section: 'Results & Evaluation',
+        snippet: 'As reported in Table 4, XLM-R with phonetic subword regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.',
+        sourceType: 'paper_chunk',
+        similarityScore: 94,
+      },
+      {
+        paperId: 'paper-demo-02',
+        paperTitle: 'BanglaBERT vs XLM-R: Comparative Analysis in Regional Bengali Social Sentiment',
+        page: 7,
+        section: 'Results & Discussion',
+        snippet: 'Contrary to prior studies favoring massive multilingual models, BanglaBERT achieved 81.3% Macro-F1 compared to 79.2% for XLM-R when text was pre-normalized.',
+        sourceType: 'paper_chunk',
+        similarityScore: 91,
+      },
+      {
+        sourceType: 'contradiction',
+        snippet: 'Documented Contradiction Record: Multilingual vs Monolingual Transformer Superiority on Dialectal Text',
+        similarityScore: 96,
+      },
+    ],
+    interpretationNotes: 'The superiority depends on preprocessing: subword regularization benefits multilingual models disproportionately by overcoming out-of-vocabulary splits.',
+    createdAt: new Date(Date.now() - 2 * 86400000 + 15000).toISOString(),
   },
 ];

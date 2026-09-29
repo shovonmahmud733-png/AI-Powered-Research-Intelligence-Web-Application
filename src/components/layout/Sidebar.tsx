@@ -24,6 +24,7 @@ import {
 
 export type WorkflowStage = 'discover' | 'understand' | 'investigate' | 'build' | 'write';
 export type SubView =
+  | 'chat'
   | 'search'
   | 'feed'
   | 'trends'
@@ -46,6 +47,23 @@ export type SubView =
   | 'systematic_review'
   | 'human_tools';
 
+interface SidebarItem {
+  id: SubView;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: number;
+  highlight?: boolean;
+  statusBadge?: string;
+}
+
+interface SidebarSection {
+  stage: WorkflowStage;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  items: SidebarItem[];
+}
+
 interface SidebarProps {
   activeStage: WorkflowStage;
   activeSubView: SubView;
@@ -57,6 +75,7 @@ interface SidebarProps {
     experimentCount: number;
     noteCount: number;
   };
+  aiAssistanceEnabled?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -64,8 +83,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeSubView,
   onSelectSubView,
   stats,
+  aiAssistanceEnabled = true,
 }) => {
-  const sections = [
+  const sections: SidebarSection[] = [
+    {
+      stage: 'understand' as WorkflowStage,
+      label: 'AI Copilot',
+      icon: Sparkles,
+      description: 'Persistent RAG Research Intelligence',
+      items: [
+        {
+          id: 'chat' as SubView,
+          label: 'Research Copilot',
+          icon: Sparkles,
+          highlight: true,
+          statusBadge: aiAssistanceEnabled ? 'Active' : 'Muted',
+        },
+      ],
+    },
     {
       stage: 'discover' as WorkflowStage,
       label: 'Discover',
@@ -165,6 +200,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         }`}
                       >
                         {item.badge}
+                      </span>
+                    )}
+
+                    {item.statusBadge && (
+                      <span
+                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full uppercase tracking-wider flex items-center space-x-1 ${
+                          aiAssistanceEnabled
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${aiAssistanceEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'}`} />
+                        <span>{item.statusBadge}</span>
                       </span>
                     )}
                   </button>

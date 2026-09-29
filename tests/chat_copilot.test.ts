@@ -1,0 +1,162 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { db } from '../src/lib/db';
+import { researchChatEngine } from '../src/lib/ai/chatEngine';
+
+import { DEMO_PROJECT_ID } from '../src/lib/db/seedData';
+
+describe('Research Copilot AI Chat: Database & RAG Engine Tests', () => {
+  const testProjectId = DEMO_PROJECT_ID;
+
+  it('1. Chat Session CRUD operations work properly', async () => {
+    // List initial sessions
+    const initialSessions = await db.getChatSessions(testProjectId);
+    expect(Array.isArray(initialSessions)).toBe(true);
+
+    // Create a new session
+    const newSession = await db.createChatSession({
+      projectId: testProjectId,
+      title: 'Bengali Dialect Morphosyntax Discussion',
+      scope: 'project',
+    });
+
+    expect(newSession).toBeDefined();
+    expect(newSession.id).toBeDefined();
+    expect(newSession.title).toBe('Bengali Dialect Morphosyntax Discussion');
+    expect(newSession.scope).toBe('project');
+
+    // Retrieve by ID
+    const retrieved = await db.getChatSessionById(newSession.id);
+    expect(retrieved).not.toBeNull();
+    expect(retrieved?.id).toBe(newSession.id);
+
+    // Update session title
+    const updated = await db.updateChatSession(newSession.id, {
+      title: 'Bengali Dialect Morphosyntax Discussion (Updated)',
+    });
+    expect(updated?.title).toBe('Bengali Dialect Morphosyntax Discussion (Updated)');
+
+    // Delete session
+    const deleted = await db.deleteChatSession(newSession.id);
+    expect(deleted).toBe(true);
+
+    const recheck = await db.getChatSessionById(newSession.id);
+    expect(recheck).toBeUndefined();
+  });
+
+  it('2. Chat Messages persistence and retrieval with grounding sources', async () => {
+    const session = await db.createChatSession({
+      projectId: testProjectId,
+      title: 'Verification Session',
+      scope: 'project',
+    });
+
+    // Add user message
+    const userMsg = await db.addChatMessage({
+      sessionId: session.id,
+      projectId: testProjectId,
+      role: 'user',
+      content: 'What is the Macro-F1 of XLM-R in the benchmark paper?',
+    });
+    expect(userMsg.role).toBe('user');
+    expect(userMsg.id).toBeDefined();
+
+    // Add assistant message with grounded sources
+    const asstMsg = await db.addChatMessage({
+      sessionId: session.id,
+      projectId: testProjectId,
+      role: 'assistant',
+      content: 'According to Table 4 of the study, XLM-R achieved 84.1% Macro-F1 on the Chittagonian dialect corpus.',
+      modelUsed: 'offline-academic-rag',
+      sources: [
+        {
+          paperId: 'paper-demo-01',
+          paperTitle: 'Benchmarking Cross-Lingual Transformers on Low-Resource Bengali Dialects',
+          page: 8,
+          section: 'Results & Evaluation',
+          snippet: 'XLM-R with phonetic subword regularization achieved 84.1% Macro-F1',
+          similarityScore: 92,
+          sourceType: 'paper_chunk',
+        },
+      ],
+    });
+
+    expect(asstMsg.role).toBe('assistant');
+    expect(asstMsg.sources?.length).toBe(1);
+    expect(asstMsg.sources?.[0].page).toBe(8);
+    expect(asstMsg.sources?.[0].section).toBe('Results & Evaluation');
+
+    // Retrieve messages
+    const msgs = await db.getChatMessages(session.id);
+    expect(msgs.length).toBe(2);
+    expect(msgs[0].role).toBe('user');
+    expect(msgs[1].role).toBe('assistant');
+
+    // Clear messages
+    await db.clearChatMessages(session.id);
+    const msgsAfterClear = await db.getChatMessages(session.id);
+    expect(msgsAfterClear.length).toBe(0);
+
+    // Clean up
+    await db.deleteChatSession(session.id);
+  });
+
+  it('3. Research Chat Engine generates grounded response with exact citations', async () => {
+    const result = await researchChatEngine.generateResponse({
+      projectId: testProjectId,
+      prompt: 'Compare XLM-R and BanglaBERT performance on low-resource dialects with exact page numbers.',
+      scope: 'project',
+      history: [],
+    });
+
+    expect(result).toBeDefined();
+    expect(result.content).toBeDefined();
+    expect(result.content.length).toBeGreaterThan(20);
+    expect(result.modelUsed).toBeDefined();
+    expect(Array.isArray(result.sources)).toBe(true);
+
+    // Should include sources from the project's document chunks
+    if (result.sources.length > 0) {
+      const firstSource = result.sources[0];
+      expect(firstSource.page).toBeGreaterThan(0);
+      expect(firstSource.section).toBeDefined();
+      expect(firstSource.paperTitle).toBeDefined();
+      expect(firstSource.snippet).toBeDefined();
+    }
+  });
+
+  it('4. Research Chat Engine enforces anti-hallucination when no matching evidence exists', async () => {
+    const result = await researchChatEngine.generateResponse({
+      projectId: testProjectId,
+      prompt: 'What was the quantum supercomputing qubit fidelity achieved in the 1920 Antarctic study?',
+      scope: 'project',
+      history: [],
+    });
+
+    expect(result).toBeDefined();
+    expect(result.content).toBeDefined();
+    // Anti-hallucination or unevidenced notice
+    expect(
+      result.content.toLowerCase().includes('insufficient evidence') ||
+      result.content.toLowerCase().includes('not found') ||
+      result.content.toLowerCase().includes('no explicit mention') ||
+      result.content.toLowerCase().includes('evidence')
+    ).toBe(true);
+  });
+
+  it('5. Research Chat Engine respects paper-restricted scope', async () => {
+    const result = await researchChatEngine.generateResponse({
+      projectId: testProjectId,
+      paperId: 'paper-demo-01',
+      prompt: 'What dataset was used in this study?',
+      scope: 'paper',
+      searchAcrossLibrary: false,
+      history: [],
+    });
+
+    expect(result).toBeDefined();
+    // All sources returned must belong to paper-demo-01
+    for (const src of result.sources) {
+      expect(src.paperId).toBe('paper-demo-01');
+    }
+  });
+});

@@ -6,12 +6,21 @@ export interface ScoredChunk {
   highlightSnippets: string[];
 }
 
+const STOPWORDS = new Set([
+  'the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'in', 'to', 'for', 'of',
+  'with', 'as', 'by', 'that', 'this', 'it', 'from', 'are', 'was', 'were',
+  'be', 'been', 'has', 'have', 'had', 'do', 'does', 'did', 'but', 'not',
+  'what', 'when', 'where', 'who', 'how', 'why', 'can', 'could', 'should',
+  'would', 'will', 'than', 'more', 'some', 'any', 'into', 'such', 'other',
+  'about', 'their', 'there', 'they', 'our', 'out'
+]);
+
 function cleanTokens(text: string): string[] {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length > 2);
+    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
 }
 
 export class VectorStore {
@@ -79,8 +88,8 @@ export class VectorStore {
         }
       }
 
-      // Normalize score between 0.1 and 0.99
-      const normalizedScore = Math.min(0.99, Math.max(0.1, tfidfScore * 10));
+      // Normalize score: 0 if no match, between 0.1 and 0.99 for actual matches
+      const normalizedScore = tfidfScore === 0 ? 0 : Math.min(0.99, Math.max(0.1, tfidfScore * 10));
 
       // Extract best snippet containing query terms
       const sentences = chunk.content.split(/(?<=[.?!])\s+/);
