@@ -107,14 +107,14 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Quick Launch Copilot */}
+        {/* Quick Launch Research AI */}
         {onOpenChat && (
           <button
             onClick={onOpenChat}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-medium rounded-lg shadow-xs transition-colors"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 dark:text-amber-600" />
-            <span className="hidden sm:inline">Research Copilot</span>
+            <span className="text-xs">🤖</span>
+            <span className="hidden sm:inline font-semibold">Research AI</span>
           </button>
         )}
 

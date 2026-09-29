@@ -88,13 +88,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const sections: SidebarSection[] = [
     {
       stage: 'understand' as WorkflowStage,
-      label: 'AI Copilot',
+      label: 'Research AI',
       icon: Sparkles,
-      description: 'Persistent RAG Research Intelligence',
+      description: 'Persistent Project-Aware Research Partner',
       items: [
         {
           id: 'chat' as SubView,
-          label: 'Research Copilot',
+          label: '🤖 Research AI',
           icon: Sparkles,
           highlight: true,
           statusBadge: aiAssistanceEnabled ? 'Active' : 'Muted',

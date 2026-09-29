@@ -23,6 +23,10 @@ import {
   HelpCircle,
   ExternalLink,
   Power,
+  Edit3,
+  RotateCcw,
+  FileCheck,
+  X,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -34,6 +38,8 @@ interface ResearchChatViewProps {
   aiAssistanceEnabled: boolean;
   onToggleAiAssistance: () => void;
   onNavigateToNotes?: () => void;
+  onOpenPaper?: (paperId: string) => void;
+  onNavigateToEvidence?: () => void;
 }
 
 export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
@@ -44,6 +50,8 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
   aiAssistanceEnabled,
   onToggleAiAssistance,
   onNavigateToNotes,
+  onOpenPaper,
+  onNavigateToEvidence,
 }) => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -58,9 +66,14 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
   const [selectedPaperId, setSelectedPaperId] = useState<string>(initialPaperId || papers[0]?.id || '');
   const [searchAcrossLibrary, setSearchAcrossLibrary] = useState(false);
 
+  // Session rename state
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameText, setRenameText] = useState('');
+
   // Feedback states
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
+  const [savedEvidenceKey, setSavedEvidenceKey] = useState<string | null>(null);
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -166,7 +179,81 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
     }
   };
 
-  // 5. Send Message
+  // 4b. Rename Session
+  const handleRenameSession = async (sessionId: string) => {
+    if (!renameText.trim()) {
+      setIsRenaming(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/chat/sessions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, title: renameText.trim() }),
+      });
+      if (res.ok) {
+        setSessions((prev) =>
+          prev.map((s) => (s.id === sessionId ? { ...s, title: renameText.trim() } : s))
+        );
+      }
+    } catch (err) {
+      console.error('Rename error:', err);
+    } finally {
+      setIsRenaming(false);
+      setRenameText('');
+    }
+  };
+
+  // 4c. Clear Conversation
+  const handleClearConversation = async () => {
+    if (!activeSessionId) return;
+    if (!confirm('Are you sure you want to clear all messages in this conversation thread?')) return;
+
+    try {
+      const res = await fetch(`/api/chat/messages?sessionId=${activeSessionId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setMessages([]);
+      }
+    } catch (err) {
+      console.error('Clear conversation error:', err);
+    }
+  };
+
+  // 4d. Save to Evidence Engine
+  const handleSaveAsEvidence = async (src: ChatSourceItem, contextClaim?: string) => {
+    try {
+      const paper = papers.find((p) => p.id === src.paperId) || papers[0];
+      const claimText = contextClaim || src.snippet || 'Empirical research observation';
+
+      const res = await fetch('/api/evidence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          paperId: src.paperId || paper?.id,
+          paperTitle: src.paperTitle || paper?.title || 'Academic Paper',
+          page: src.page || 1,
+          section: src.section || 'Extracted Section',
+          claim: claimText.substring(0, 200),
+          snippet: src.snippet || claimText,
+          verificationStatus: 'verified',
+        }),
+      });
+
+      if (res.ok) {
+        const key = `${src.paperId}-${src.page}-${src.section}`;
+        setSavedEvidenceKey(key);
+        setTimeout(() => setSavedEvidenceKey(null), 3000);
+      }
+    } catch (err) {
+      alert('Failed to save to Evidence Engine');
+    }
+  };
+
+  // 5. Send Message (with streaming animation)
   const handleSendMessage = async (textToSend?: string) => {
     const prompt = textToSend || inputPrompt;
     if (!prompt.trim() || sending) return;
@@ -208,15 +295,39 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
 
       const data = await res.json();
       if (res.ok) {
+        const asst = data.assistantMessage;
         setMessages((prev) =>
-          prev.map((m) => (m.id === tempUserMsg.id ? data.userMessage : m)).concat(data.assistantMessage)
+          prev.map((m) => (m.id === tempUserMsg.id ? data.userMessage : m))
         );
-        fetchSessions(); // refresh title if it was updated
+        fetchSessions();
+
+        // Progressive stream typing animation
+        const fullContent = asst.content;
+        let charIndex = 0;
+        const tempAsst: ChatMessage = { ...asst, content: '' };
+        setMessages((prev) => [...prev, tempAsst]);
+
+        const step = Math.max(4, Math.floor(fullContent.length / 30));
+        const timer = setInterval(() => {
+          charIndex += step;
+          if (charIndex >= fullContent.length) {
+            clearInterval(timer);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === asst.id ? asst : m))
+            );
+            setTimeout(scrollToBottom, 50);
+          } else {
+            const partial = fullContent.substring(0, charIndex);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === asst.id ? { ...m, content: partial } : m))
+            );
+          }
+        }, 15);
       } else {
         alert(data.error || 'Failed to generate response');
       }
     } catch (err) {
-      alert('Error communicating with Research Copilot');
+      alert('Error communicating with Research AI');
     } finally {
       setSending(false);
       setTimeout(scrollToBottom, 100);
@@ -293,13 +404,15 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
   };
 
   const researchPrompts = [
-    'Explain the core methodology and baseline setup.',
-    'Compare the findings of the papers in this project.',
-    'Why do the papers disagree on transformer superiority?',
-    'What datasets are used and are there missing benchmarks?',
-    'Identify repeated limitations and potential research gaps.',
-    'Verify if XLM-R outperformed mBERT in the reported results.',
-    'Suggest unanswered research questions for my thesis.',
+    'What are the major limitations across the papers in my current project?',
+    'Compare these papers.',
+    'Explain this methodology.',
+    'Find evidence supporting this claim.',
+    'Why do these papers disagree?',
+    'What datasets are used across the papers?',
+    'Help me organize my literature review.',
+    'Verify my interpretation against the extracted evidence.',
+    'Suggest unanswered research questions for my project.',
   ];
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
@@ -309,13 +422,14 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
       {/* Top Banner: AI Assistance Mode & Context Status */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-950 font-bold">
-            <Sparkles className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-lg bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-950 font-bold text-base">
+            🤖
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Research AI Copilot
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center space-x-1.5">
+                <span>Research AI</span>
+                <span className="text-xs font-normal text-zinc-500">· Project Intelligence Assistant</span>
               </h2>
               <span
                 className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${
@@ -328,7 +442,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
               </span>
             </div>
             <p className="text-xs text-zinc-500 mt-0.5">
-              Evidence-grounded scientific partner with strict page/section citations.
+              Evidence-grounded conversational assistant directly aware of project papers, notes, matrix, and findings.
             </p>
           </div>
         </div>
@@ -442,18 +556,64 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
           {/* Center Chat Arena */}
           <div className="lg:col-span-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl flex flex-col h-full overflow-hidden shadow-xs">
             {/* Conversation Header & Scope Switcher */}
-            <div className="p-3.5 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 flex flex-wrap items-center justify-between gap-2">
+            <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center space-x-2 truncate">
-                <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-                  {activeSession?.title || 'Research Copilot'}
-                </span>
+                {isRenaming ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (activeSessionId) handleRenameSession(activeSessionId);
+                    }}
+                    className="flex items-center space-x-1.5"
+                  >
+                    <input
+                      type="text"
+                      value={renameText}
+                      onChange={(e) => setRenameText(e.target.value)}
+                      className="text-xs bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-0.5 text-zinc-900 dark:text-zinc-100 focus:outline-none"
+                      autoFocus
+                    />
+                    <button
+                      type="submit"
+                      className="text-[10px] bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 px-2 py-0.5 rounded font-medium"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsRenaming(false)}
+                      className="text-[10px] text-zinc-400 hover:text-zinc-600 px-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                ) : (
+                  <div className="flex items-center space-x-1.5 truncate">
+                    <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {activeSession?.title || 'Research AI Thread'}
+                    </span>
+                    {activeSession && (
+                      <button
+                        onClick={() => {
+                          setRenameText(activeSession.title);
+                          setIsRenaming(true);
+                        }}
+                        className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                        title="Rename Conversation"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <span className="text-[10px] font-mono bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded">
                   {searchAcrossLibrary || scope === 'project' ? 'Project Library' : 'Single Paper Scope'}
                 </span>
               </div>
 
-              {/* Scope Switcher / Restrict to Paper (Requirement 10) */}
-              <div className="flex items-center space-x-3 text-xs">
+              {/* Scope Switcher / Restrict to Paper & Actions */}
+              <div className="flex items-center space-x-2 text-xs">
                 {scope === 'paper' && (
                   <label className="flex items-center space-x-1.5 cursor-pointer text-[11px] text-zinc-600 dark:text-zinc-400 font-mono">
                     <input
@@ -462,14 +622,24 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                       onChange={(e) => setSearchAcrossLibrary(e.target.checked)}
                       className="rounded border-zinc-300 text-zinc-900 focus:ring-0"
                     />
-                    <span>Search across my research library</span>
+                    <span>Search Across My Research Library</span>
                   </label>
                 )}
 
                 <button
+                  onClick={handleClearConversation}
+                  disabled={messages.length === 0}
+                  className="inline-flex items-center space-x-1 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded text-xs transition-colors disabled:opacity-40"
+                  title="Clear conversation messages"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Clear</span>
+                </button>
+
+                <button
                   onClick={handleRegenerate}
                   disabled={sending || messages.length === 0}
-                  className="inline-flex items-center space-x-1 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-700 dark:text-zinc-300 rounded text-xs transition-colors disabled:opacity-40"
+                  className="inline-flex items-center space-x-1 px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded text-xs transition-colors disabled:opacity-40"
                   title="Regenerate last response"
                 >
                   <RotateCw className={`w-3.5 h-3.5 ${sending ? 'animate-spin' : ''}`} />
@@ -560,30 +730,57 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
 
                           {isExpanded && (
                             <div className="space-y-1.5 pt-1">
-                              {msg.sources?.map((src, sIdx) => (
-                                <div
-                                  key={sIdx}
-                                  className="p-2.5 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 text-[11px] space-y-1"
-                                >
-                                  <div className="flex items-center justify-between text-zinc-700 dark:text-zinc-300 font-medium">
-                                    <span>
-                                      {src.paperTitle || 'Publication'}
-                                      {src.page && ` · Page ${src.page}`}
-                                      {src.section && ` · ${src.section}`}
-                                    </span>
-                                    {src.similarityScore && (
-                                      <span className="font-mono text-zinc-400 text-[10px]">
-                                        {src.similarityScore}% match
-                                      </span>
+                              {msg.sources?.map((src, sIdx) => {
+                                const evKey = `${src.paperId}-${src.page}-${src.section}`;
+                                return (
+                                  <div
+                                    key={sIdx}
+                                    className="p-2.5 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 text-[11px] space-y-1.5 shadow-2xs"
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-1 text-zinc-700 dark:text-zinc-300 font-medium">
+                                      <div className="flex items-center space-x-1 truncate max-w-[80%]">
+                                        {src.paperId && onOpenPaper ? (
+                                          <button
+                                            onClick={() => onOpenPaper(src.paperId!)}
+                                            className="hover:underline text-emerald-700 dark:text-emerald-400 font-semibold inline-flex items-center space-x-1 text-left truncate"
+                                            title="Open and read paper in Structured Analysis"
+                                          >
+                                            <span className="truncate">{src.paperTitle || 'Publication'}</span>
+                                            <ExternalLink className="w-3 h-3 shrink-0 ml-0.5" />
+                                          </button>
+                                        ) : (
+                                          <span className="truncate">{src.paperTitle || 'Publication'}</span>
+                                        )}
+                                        {src.page && <span className="font-mono text-zinc-500">· Page {src.page}</span>}
+                                        {src.section && <span className="font-mono text-zinc-500">· {src.section}</span>}
+                                      </div>
+
+                                      {src.similarityScore && (
+                                        <span className="font-mono text-zinc-400 text-[10px]">
+                                          {src.similarityScore}% match
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {src.snippet && (
+                                      <p className="italic text-zinc-600 dark:text-zinc-400 text-[11px] leading-relaxed">
+                                        &ldquo;{src.snippet}&rdquo;
+                                      </p>
                                     )}
+
+                                    <div className="flex items-center justify-end pt-1">
+                                      <button
+                                        onClick={() => handleSaveAsEvidence(src)}
+                                        className="inline-flex items-center space-x-1 px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded text-[10px] font-mono transition-colors"
+                                        title="Persist this verified excerpt to Evidence Engine"
+                                      >
+                                        <FileCheck className="w-3 h-3 text-emerald-600" />
+                                        <span>{savedEvidenceKey === evKey ? 'Saved to Evidence!' : '+ Save Evidence'}</span>
+                                      </button>
+                                    </div>
                                   </div>
-                                  {src.snippet && (
-                                    <p className="italic text-zinc-600 dark:text-zinc-400">
-                                      &ldquo;{src.snippet}&rdquo;
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -596,7 +793,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                             <span>Deterministic Local / Multi-LLM</span>
                           </div>
 
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-1.5">
                             <button
                               onClick={() => copyToClipboard(msg.content, msg.id)}
                               className="p-1.5 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-zinc-600 dark:text-zinc-400 transition-colors"
@@ -604,6 +801,17 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                             >
                               {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
+
+                            {msg.sources && msg.sources.length > 0 && (
+                              <button
+                                onClick={() => handleSaveAsEvidence(msg.sources![0], msg.content.substring(0, 160))}
+                                className="inline-flex items-center space-x-1 px-2 py-1 bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded text-[11px] transition-colors"
+                                title="Save primary finding to Evidence repository"
+                              >
+                                <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Save Evidence</span>
+                              </button>
+                            )}
 
                             <button
                               onClick={() => handleSaveToNotes(msg)}

@@ -40,6 +40,25 @@ export async function POST(req: Request) {
   }
 }
 
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const { sessionId, title } = body;
+    if (!sessionId || !title) {
+      return NextResponse.json({ error: 'sessionId and title are required' }, { status: 400 });
+    }
+
+    const updated = db.updateChatSession(sessionId, { title });
+    if (!updated) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ session: updated });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: Request) {
   const url = new URL(req.url);
   const sessionId = url.searchParams.get('sessionId');

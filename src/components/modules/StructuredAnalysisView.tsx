@@ -18,11 +18,13 @@ import {
 interface StructuredAnalysisViewProps {
   papers: Paper[];
   initialPaperId?: string;
+  onAskThisPaper?: (paperId: string) => void;
 }
 
 export const StructuredAnalysisView: React.FC<StructuredAnalysisViewProps> = ({
   papers,
   initialPaperId,
+  onAskThisPaper,
 }) => {
   const [selectedPaperId, setSelectedPaperId] = useState<string>(
     initialPaperId || papers[0]?.id || ''
@@ -101,6 +103,17 @@ export const StructuredAnalysisView: React.FC<StructuredAnalysisViewProps> = ({
               </option>
             ))}
           </select>
+
+          {onAskThisPaper && selectedPaperId && (
+            <button
+              onClick={() => onAskThisPaper(selectedPaperId)}
+              className="inline-flex items-center space-x-1 px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded-lg text-xs font-medium transition-colors"
+              title="Open Research AI Chat restricted to this paper"
+            >
+              <span>🤖</span>
+              <span>Ask This Paper</span>
+            </button>
+          )}
 
           <button
             onClick={handleTriggerExtract}

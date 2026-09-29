@@ -185,6 +185,7 @@ To ground reasoning on this topic:
       const response = await modelRouter.execute({
         task: 'research_synthesis',
         prompt: promptPayload,
+        userQuery: userMessage,
         systemPrompt,
         retrievedChunks: scoredChunks,
         paperMetadata: papers[0] ? { title: papers[0].title } : undefined,

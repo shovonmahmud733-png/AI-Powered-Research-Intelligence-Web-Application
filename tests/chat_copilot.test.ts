@@ -159,4 +159,31 @@ describe('Research Copilot AI Chat: Database & RAG Engine Tests', () => {
       expect(src.paperId).toBe('paper-demo-01');
     }
   });
+
+  it('6. Research Chat Engine synthesizes cross-paper limitations with grounded sources', async () => {
+    const result = await researchChatEngine.generateResponse({
+      projectId: testProjectId,
+      prompt: 'What are the major limitations across the papers in my current project?',
+      scope: 'project',
+      history: [],
+    });
+
+    expect(result).toBeDefined();
+    expect(result.content).toBeDefined();
+    expect(result.content.toLowerCase()).toContain('limitation');
+    expect(result.sources.length).toBeGreaterThan(0);
+  });
+
+  it('7. Research Chat Engine handles cross-paper disagreements and contradictions', async () => {
+    const result = await researchChatEngine.generateResponse({
+      projectId: testProjectId,
+      prompt: 'Why do these papers disagree on model performance?',
+      scope: 'project',
+      history: [],
+    });
+
+    expect(result).toBeDefined();
+    expect(result.content).toBeDefined();
+    expect(result.content.toLowerCase().includes('disagree') || result.content.toLowerCase().includes('claim') || result.content.toLowerCase().includes('trade-off')).toBe(true);
+  });
 });

@@ -193,6 +193,15 @@ export default function ResearchWorkspacePage() {
                   setStage('write');
                   setSubView('notes');
                 }}
+                onOpenPaper={(paperId) => {
+                  setSelectedAnalysisPaperId(paperId);
+                  setStage('understand');
+                  setSubView('analysis');
+                }}
+                onNavigateToEvidence={() => {
+                  setStage('investigate');
+                  setSubView('evidence');
+                }}
               />
             )}
 
@@ -234,6 +243,11 @@ export default function ResearchWorkspacePage() {
               <StructuredAnalysisView
                 papers={papers}
                 initialPaperId={selectedAnalysisPaperId}
+                onAskThisPaper={(pId) => {
+                  setSelectedChatPaperId(pId);
+                  setStage('understand');
+                  setSubView('chat');
+                }}
               />
             )}
             {subView === 'reproducibility' && (

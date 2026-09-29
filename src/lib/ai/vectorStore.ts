@@ -12,7 +12,8 @@ const STOPWORDS = new Set([
   'be', 'been', 'has', 'have', 'had', 'do', 'does', 'did', 'but', 'not',
   'what', 'when', 'where', 'who', 'how', 'why', 'can', 'could', 'should',
   'would', 'will', 'than', 'more', 'some', 'any', 'into', 'such', 'other',
-  'about', 'their', 'there', 'they', 'our', 'out'
+  'about', 'their', 'there', 'they', 'our', 'out',
+  'study', 'studies', 'paper', 'papers'
 ]);
 
 function cleanTokens(text: string): string[] {
