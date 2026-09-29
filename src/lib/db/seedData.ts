@@ -1,0 +1,915 @@
+import {
+  User,
+  ResearchProject,
+  Paper,
+  DocumentChunk,
+  StructuredPaperAnalysis,
+  LiteratureMatrixRow,
+  Evidence,
+  Contradiction,
+  ResearchGap,
+  ResearchMemoryItem,
+  ResearchNote,
+  MLExperiment,
+  SystematicReviewItem,
+} from './types';
+import bcrypt from 'bcryptjs';
+
+export const DEMO_USER_ID = 'usr_demo_researcher_01';
+export const DEMO_PROJECT_ID = 'proj_chatgaiya_sentiment_01';
+
+export const initialUsers: User[] = [
+  {
+    id: DEMO_USER_ID,
+    name: 'Dr. Sarah Mahmud',
+    email: 'sarah.mahmud@university.edu',
+    passwordHash: bcrypt.hashSync('Researcher123!', 8),
+    institution: 'Department of Computer Science & NLP Lab',
+    fieldOfStudy: 'Natural Language Processing & Low-Resource Dialects',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+export const initialProjects: ResearchProject[] = [
+  {
+    id: DEMO_PROJECT_ID,
+    userId: DEMO_USER_ID,
+    title: 'Chatgaiya Sentiment Analysis & Low-Resource Dialectal NLP',
+    description:
+      'Investigation of cross-lingual transfer, phonetic tokenization, and domain adaptation of multilingual transformer models (XLM-R, mBERT, BanglaBERT) on Chittagonian (Chatgaiya) dialectal social text.',
+    researchField: 'Computational Linguistics & Low-Resource NLP',
+    researchQuestions: [
+      {
+        id: 'rq-1',
+        question: 'Does subword tokenization designed for standard Bengali preserve semantic morphemes in spoken Chatgaiya?',
+        status: 'active',
+        notes: 'Evidence suggests subword fragmentation rate increases by 42% on dialectal verbs.',
+      },
+      {
+        id: 'rq-2',
+        question: 'How does fine-tuned XLM-RoBERTa perform compared to native pre-trained BanglaBERT on noisy dialectal text?',
+        status: 'answered',
+        notes: 'XLM-R achieves higher macro-F1 (0.841 vs 0.792) when combined with phonetic augmentation.',
+      },
+      {
+        id: 'rq-3',
+        question: 'Can cross-lingual transfer from Romanized Chittagonian to Bengali-script Chittagonian reduce annotation costs?',
+        status: 'exploring',
+        notes: 'Preliminary zero-shot transfer shows 0.63 F1 without phonological alignment.',
+      },
+      {
+        id: 'rq-4',
+        question: 'What is the impact of code-switching with English and Standard Bangla on sentiment polarity classification?',
+        status: 'active',
+      },
+      {
+        id: 'rq-5',
+        question: 'Are human-annotated sentiment corpora in non-standard dialects vulnerable to regional annotator bias?',
+        status: 'exploring',
+      },
+    ],
+    objectives: [
+      'Construct a benchmark dialectal sentiment corpus of 10,000 verified Chittagonian utterances',
+      'Evaluate tokenization fragmentation across Byte-Pair Encoding and WordPiece for dialectal orthography',
+      'Formulate reproducible fine-tuning guidelines for multilingual transformers on low-resource Indic dialects',
+      'Identify cross-paper contradictions regarding subword vs character-level models',
+    ],
+    tags: ['NLP', 'Low-Resource Languages', 'Chatgaiya', 'Sentiment Analysis', 'Transformers', 'Dialectology'],
+    createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    isDemo: true,
+  },
+];
+
+export const initialPapers: Paper[] = [
+  {
+    id: 'paper-demo-01',
+    projectId: DEMO_PROJECT_ID,
+    doi: '10.1016/demo.chatgaiya.2024.001',
+    title: '[DEMO PAPER — NOT A REAL PUBLICATION] Evaluating Multilingual Transformers on Chittagonian Dialectal Sentiment',
+    authors: ['Rahman, T.', 'Hossain, M. Z.', 'Akter, F.'],
+    abstract:
+      'We investigate the performance of multilingual transformer models (XLM-RoBERTa and mBERT) on sentiment classification in Chittagonian (Chatgaiya), an under-resourced Eastern Indo-Aryan language. Using a new curated dataset of 4,200 social media utterances, we demonstrate that standard subword tokenizers suffer from catastrophic vocabulary fragmentation on dialectal phonology. By introducing a phonetic-aware subword regularization method, XLM-R reaches 84.1% Macro-F1, outperforming mBERT by 4.9 percentage points.',
+    publicationYear: 2024,
+    journalOrConference: 'Proceedings of Low-Resource Indic NLP (LRP-2024)',
+    url: 'https://arxiv.org/abs/demo/2401.0001',
+    openAccessUrl: 'https://arxiv.org/pdf/demo/2401.0001.pdf',
+    citationCount: 18,
+    sourceProvider: 'demo',
+    sourceId: 'demo-2401.0001',
+    references: ['Devlin et al., 2019', 'Conneau et al., 2020', 'Bhattacharyya et al., 2022'],
+    retrievalDate: new Date().toISOString(),
+    metadataStatus: 'verified',
+    retractionStatus: 'clean',
+    pdfFileName: 'evaluating_transformers_chittagonian.pdf',
+    pdfFileSize: 2451000,
+    processingStatus: 'ready',
+    isDemo: true,
+    createdAt: new Date(Date.now() - 25 * 86400000).toISOString(),
+  },
+  {
+    id: 'paper-demo-02',
+    projectId: DEMO_PROJECT_ID,
+    doi: '10.1016/demo.chatgaiya.2023.002',
+    title: '[DEMO PAPER — NOT A REAL PUBLICATION] BanglaBERT vs XLM-R: Comparative Analysis in Regional Bengali Social Sentiment',
+    authors: ['Karim, S.', 'Chowdhury, A. N.', 'Das, P.'],
+    abstract:
+      'Monolingual pre-trained language models like BanglaBERT have demonstrated superior performance on formal Bengali NLP benchmarks. However, regional colloquial dialects introduce distinct grammatical morphemes and phonetic spellings. In this study, contrary to common expectations, BanglaBERT outperformed XLM-R by 2.1% Macro F1 on raw colloquial text when pre-tokenization normalization was applied.',
+    publicationYear: 2023,
+    journalOrConference: 'Transactions on Asian Language Processing (TALIP)',
+    url: 'https://doi.org/demo/talip.2023.002',
+    openAccessUrl: 'https://talip.demo/open/2023.002.pdf',
+    citationCount: 42,
+    sourceProvider: 'demo',
+    sourceId: 'demo-talip-2023',
+    references: ['Sarker et al., 2020', 'Rahman et al., 2022'],
+    retrievalDate: new Date().toISOString(),
+    metadataStatus: 'verified',
+    retractionStatus: 'clean',
+    pdfFileName: 'banglabert_vs_xlmr_comparative.pdf',
+    pdfFileSize: 1980000,
+    processingStatus: 'ready',
+    isDemo: true,
+    createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
+  },
+  {
+    id: 'paper-demo-03',
+    projectId: DEMO_PROJECT_ID,
+    doi: '10.1016/demo.chatgaiya.2023.003',
+    title: '[DEMO PAPER — NOT A REAL PUBLICATION] Subword Regularization and Lexical Coverage in Eastern Indo-Aryan Dialects',
+    authors: ['Islam, N.', 'Khan, R. U.'],
+    abstract:
+      'We examine the lexical coverage of Byte-Pair Encoding (BPE) across 5 non-standard Bengali regional dialects. Our quantitative analysis reveals that Chatgaiya exhibits the highest Out-Of-Vocabulary (OOV) subword decomposition rate (48.3% tokens split into 3+ fragments). We propose character-level convolutional adapters to alleviate lexical sparsity.',
+    publicationYear: 2023,
+    journalOrConference: 'Empirical Methods in Natural Language Processing (EMNLP Findings)',
+    url: 'https://aclanthology.org/demo/2023.emnlp.03',
+    openAccessUrl: 'https://aclanthology.org/demo/2023.emnlp.03.pdf',
+    citationCount: 29,
+    sourceProvider: 'demo',
+    sourceId: 'demo-emnlp-2023',
+    references: ['Kudo, 2018', 'Sennrich et al., 2016'],
+    retrievalDate: new Date().toISOString(),
+    metadataStatus: 'verified',
+    retractionStatus: 'clean',
+    pdfFileName: 'subword_regularization_indo_aryan.pdf',
+    pdfFileSize: 3120000,
+    processingStatus: 'ready',
+    isDemo: true,
+    createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
+  },
+  {
+    id: 'paper-demo-04',
+    projectId: DEMO_PROJECT_ID,
+    doi: '10.1016/demo.chatgaiya.2022.004',
+    title: '[DEMO PAPER — NOT A REAL PUBLICATION] Annotator Disagreement and Ethical Considerations in Dialectal Sentiment Datasets',
+    authors: ['Barua, P.', 'Sen, S.', 'Alam, K.'],
+    abstract:
+      'Dialectal sentiment annotation faces acute inter-annotator disagreement due to nuanced cultural idioms, sarcasm, and colloquial pragmatics. In our audit of 3 public regional sentiment datasets, Cohen’s kappa dropped to 0.46 among non-native speakers annotating Chatgaiya utterances, compared to 0.78 among native speakers.',
+    publicationYear: 2022,
+    journalOrConference: 'Computational Linguistics & Society Workshop',
+    url: 'https://doi.org/demo/cls.2022.004',
+    openAccessUrl: 'https://cls.demo/2022.004.pdf',
+    citationCount: 15,
+    sourceProvider: 'demo',
+    sourceId: 'demo-cls-2022',
+    references: ['Artstein and Poesio, 2008', 'Blodgett et al., 2020'],
+    retrievalDate: new Date().toISOString(),
+    metadataStatus: 'verified',
+    retractionStatus: 'clean',
+    pdfFileName: 'annotator_disagreement_dialectal.pdf',
+    pdfFileSize: 1420000,
+    processingStatus: 'ready',
+    isDemo: true,
+    createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
+  },
+  {
+    id: 'paper-demo-05',
+    projectId: DEMO_PROJECT_ID,
+    doi: '10.1016/demo.chatgaiya.2024.005',
+    title: '[DEMO PAPER — NOT A REAL PUBLICATION] Zero-Shot Cross-Lingual Transfer from Standard Bengali to Dialectal Varieties',
+    authors: ['Ahmed, Z.', 'Chowdhury, M.', 'Hasan, R.'],
+    abstract:
+      'We benchmark zero-shot cross-lingual transfer from Standard Bengali sentiment training to Chittagonian, Sylheti, and Noakhailla test splits. Direct transfer without phonological alignment yields a significant drop of 21.4% in macro F1, highlighting the inadequacy of standard language models for vernacular dialect understanding.',
+    publicationYear: 2024,
+    journalOrConference: 'ACL Workshop on Low-Resource Dialects',
+    url: 'https://aclanthology.org/demo/2024.dialects.05',
+    openAccessUrl: 'https://aclanthology.org/demo/2024.dialects.05.pdf',
+    citationCount: 7,
+    sourceProvider: 'demo',
+    sourceId: 'demo-dialects-2024',
+    references: ['Pires et al., 2019', 'Wu and Dredze, 2020'],
+    retrievalDate: new Date().toISOString(),
+    metadataStatus: 'verified',
+    retractionStatus: 'clean',
+    pdfFileName: 'zero_shot_transfer_bengali_varieties.pdf',
+    pdfFileSize: 1850000,
+    processingStatus: 'ready',
+    isDemo: true,
+    createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
+  },
+];
+
+export const initialChunks: DocumentChunk[] = [
+  {
+    id: 'chunk-demo-1-1',
+    paperId: 'paper-demo-01',
+    pageNumber: 1,
+    sectionName: 'Introduction',
+    chunkIndex: 0,
+    content:
+      'Chittagonian (locally known as Chatgaiya) is an Eastern Indo-Aryan language spoken by over 13 million people primarily in southeastern Bangladesh. Despite its substantial speaker population, computational resources for Chittagonian are virtually non-existent, categorizing it as an extremely low-resource language in modern NLP taxonomies.',
+  },
+  {
+    id: 'chunk-demo-1-2',
+    paperId: 'paper-demo-01',
+    pageNumber: 3,
+    sectionName: 'Dataset Construction',
+    chunkIndex: 1,
+    content:
+      'We curated 4,200 social media comments from public regional Facebook pages and YouTube videos focused on Chittagonian regional drama and cultural discourse. Three native Chittagonian linguists annotated the data into three sentiment classes: Positive (1,520), Negative (1,840), and Neutral (840). Fleiss’ kappa across annotators reached 0.81.',
+  },
+  {
+    id: 'chunk-demo-1-3',
+    paperId: 'paper-demo-01',
+    pageNumber: 6,
+    sectionName: 'Methodology & Model Architecture',
+    chunkIndex: 2,
+    content:
+      'We selected XLM-RoBERTa (XLM-R-base) and mBERT as multilingual baselines. XLM-R was chosen because its SentencePiece vocabulary spans 250,000 subwords across 100 languages, providing broader phoneme cluster coverage than mBERT WordPiece. We applied a phonetic subword regularization scheme with dropout alpha=0.1 on the subword segmenter.',
+  },
+  {
+    id: 'chunk-demo-1-4',
+    paperId: 'paper-demo-01',
+    pageNumber: 8,
+    sectionName: 'Results & Evaluation',
+    chunkIndex: 3,
+    content:
+      'As reported in Table 4, XLM-R with phonetic subword regularization achieved 84.1% Macro-F1 (Accuracy 85.3%), whereas mBERT achieved 79.2% Macro-F1. When tested without regularization, XLM-R dropped to 77.8%, confirming that vocabulary fragmentation significantly harms classification.',
+  },
+  {
+    id: 'chunk-demo-1-5',
+    paperId: 'paper-demo-01',
+    pageNumber: 9,
+    sectionName: 'Limitations & Future Work',
+    chunkIndex: 4,
+    content:
+      'Our primary limitation is the lack of standardized orthography in Chatgaiya; users write using both Bengali script and Romanized phonetics (Banglish). Our dataset only evaluates Bengali script representation. Future work should develop cross-script alignment methods.',
+  },
+  // Paper 2 chunks
+  {
+    id: 'chunk-demo-2-1',
+    paperId: 'paper-demo-02',
+    pageNumber: 4,
+    sectionName: 'Experimental Setup',
+    chunkIndex: 0,
+    content:
+      'We compared monolingual pre-trained BanglaBERT against XLM-RoBERTa on 3,500 regional social utterances. Models were trained for 5 epochs using AdamW with learning rate 2e-5, batch size 32, and linear warmup over the first 10% steps.',
+  },
+  {
+    id: 'chunk-demo-2-2',
+    paperId: 'paper-demo-02',
+    pageNumber: 7,
+    sectionName: 'Results & Discussion',
+    chunkIndex: 1,
+    content:
+      'Contrary to prior studies favoring massive multilingual models, BanglaBERT achieved 81.3% Macro-F1 compared to 79.2% for XLM-R when text was pre-normalized. BanglaBERT retains language-specific morphological cues that are diluted in multilingual embedding spaces.',
+  },
+  // Paper 3 chunks
+  {
+    id: 'chunk-demo-3-1',
+    paperId: 'paper-demo-03',
+    pageNumber: 5,
+    sectionName: 'Subword Fragmentation Analysis',
+    chunkIndex: 0,
+    content:
+      'Tokenization fragmentation analysis indicates that 48.3% of unique Chittagonian tokens split into three or more subwords when processed by standard multilingual vocabularies. This token fragmentation causes transformer attention maps to disperse over sub-phonetic fragments rather than morpheme roots.',
+  },
+  // Paper 4 chunks
+  {
+    id: 'chunk-demo-4-1',
+    paperId: 'paper-demo-04',
+    pageNumber: 3,
+    sectionName: 'Annotator Demographics & Reliability',
+    chunkIndex: 0,
+    content:
+      'Evaluating annotator reliability across 1,000 Chatgaiya sentences revealed that non-native Bengali speakers misclassified colloquial sarcasm in 38% of negative instances, resulting in an inter-annotator Cohen kappa of 0.46. When annotated exclusively by native Chittagonian speakers, kappa reached 0.78.',
+  },
+  // Paper 5 chunks
+  {
+    id: 'chunk-demo-5-1',
+    paperId: 'paper-demo-05',
+    pageNumber: 4,
+    sectionName: 'Zero-Shot Transfer Experiments',
+    chunkIndex: 0,
+    content:
+      'Direct zero-shot transfer from Standard Bengali training data to Chittagonian test data resulted in a 21.4% drop in Macro F1 (from 83.2% to 61.8%). This empirically proves that standard language corpora cannot substitute for localized dialectal resources.',
+  },
+];
+
+export const initialAnalysis: StructuredPaperAnalysis[] = [
+  {
+    id: 'analysis-demo-01',
+    paperId: 'paper-demo-01',
+    researchProblem:
+      'Severe performance degradation and catastrophic subword fragmentation of multilingual transformers on non-standardized Chittagonian dialectal sentiment text.',
+    researchQuestions: [
+      'How does subword tokenization fragmentation impact dialectal sentiment classification?',
+      'Can phonetic subword regularization mitigate vocabulary mismatch in low-resource Eastern Indo-Aryan dialects?',
+    ],
+    contributions: [
+      'First publicly benchmarked Chatgaiya sentiment dataset (4,200 curated utterances with native speaker annotations)',
+      'Phonetic-aware subword regularization method yielding +6.3% F1 improvement on fragmented vocabulary',
+      'Systematic empirical comparison between XLM-R, mBERT, and static embedding baselines',
+    ],
+    dataset: 'Chatgaiya Sentiment Corpus (CSC-24)',
+    datasetSize: '4,200 annotated social utterances (1,520 Pos, 1,840 Neg, 840 Neu)',
+    preprocessing: [
+      'Emoji normalization and phonetic spelling deduplication',
+      'Punctuation preservation for emotional emphasis',
+      'Native script orthography harmonization',
+    ],
+    features: ['SentencePiece subword embeddings', 'Phonetic regularization dropout (alpha=0.1)'],
+    model: 'XLM-RoBERTa (base) with phonetic regularization adapter',
+    trainingSetup: 'AdamW optimizer, LR=2e-5, Batch size 16, 5 epochs, Warmup 10%, GPU NVIDIA A100',
+    evaluationMetrics: ['Macro-F1', 'Accuracy', 'Weighted Precision', 'Recall'],
+    results: {
+      'XLM-R (with regularization)': '84.1% Macro-F1',
+      'mBERT Baseline': '79.2% Macro-F1',
+      'XLM-R (unregularized)': '77.8% Macro-F1',
+      'BiLSTM baseline': '68.4% Macro-F1',
+    },
+    limitations: [
+      'Dataset limited to Bengali script; excludes Romanized Chittagonian (Banglish)',
+      'Domain restricted to social media commentary (Facebook/YouTube)',
+      'Requires native phonetic dictionary for regularization',
+    ],
+    futureWork: [
+      'Expand cross-script alignment to Romanized Chittagonian',
+      'Explore acoustic-phonetic pre-training using speech recordings',
+      'Evaluate LLM few-shot in-context learning capabilities',
+    ],
+  },
+  {
+    id: 'analysis-demo-02',
+    paperId: 'paper-demo-02',
+    researchProblem:
+      'Discrepancy in performance between monolingual Bengali transformers and massively multilingual models on regional dialect variants.',
+    researchQuestions: [
+      'Does language-specific pre-training outweigh multilingual capacity when dealing with colloquial Bengali dialects?',
+    ],
+    contributions: [
+      'Comparative evaluation on 3,500 colloquial regional utterances',
+      'Pre-tokenization morphological normalization pipeline',
+      'Demonstration that BanglaBERT retains dialectal morphemes better when pre-normalized',
+    ],
+    dataset: 'Colloquial Regional Bengali Corpus (CRBC-23)',
+    datasetSize: '3,500 utterances across 3 divisions',
+    preprocessing: ['Colloquial slang lexicon lookup', 'Morpheme stemmer'],
+    features: ['WordPiece token embeddings'],
+    model: 'BanglaBERT (electra-base architecture)',
+    trainingSetup: 'AdamW, LR=3e-5, Batch size 32, 5 epochs',
+    evaluationMetrics: ['Macro-F1', 'Accuracy'],
+    results: {
+      BanglaBERT: '81.3% Macro-F1',
+      'XLM-R': '79.2% Macro-F1',
+    },
+    limitations: [
+      'Relies on static colloquial dictionary which does not scale to new slang',
+      'Only tested on 3 divisions',
+    ],
+    futureWork: ['Dynamic vocabulary expansion', 'Contextual morpho-syntactic parsing'],
+  },
+];
+
+export const initialMatrix: LiteratureMatrixRow[] = [
+  {
+    id: 'mat-1',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-01',
+    paperTitle: 'Evaluating Multilingual Transformers on Chittagonian Dialectal Sentiment',
+    year: 2024,
+    dataset: 'CSC-24 (4,200 items)',
+    model: 'XLM-R + Phonetic Reg',
+    language: 'Chatgaiya (Bengali script)',
+    method: 'Phonetic subword regularization',
+    metric: 'Macro-F1: 84.1%',
+    result: 'Outperforms mBERT by 4.9% F1',
+    limitation: 'Script limited; no Banglish coverage',
+    customColumns: {
+      'Pre-training Domain': 'Multilingual (100 langs)',
+      'Annotator Agreement': 'Fleiss kappa: 0.81',
+    },
+  },
+  {
+    id: 'mat-2',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-02',
+    paperTitle: 'BanglaBERT vs XLM-R: Comparative Analysis in Regional Bengali Social Sentiment',
+    year: 2023,
+    dataset: 'CRBC-23 (3,500 items)',
+    model: 'BanglaBERT',
+    language: 'Colloquial Bengali dialects',
+    method: 'Morphological pre-normalization',
+    metric: 'Macro-F1: 81.3%',
+    result: 'BanglaBERT +2.1% F1 over XLM-R',
+    limitation: 'Requires static slang dictionary',
+    customColumns: {
+      'Pre-training Domain': 'Monolingual Bengali',
+      'Annotator Agreement': 'Cohen kappa: 0.72',
+    },
+  },
+  {
+    id: 'mat-3',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-03',
+    paperTitle: 'Subword Regularization and Lexical Coverage in Eastern Indo-Aryan Dialects',
+    year: 2023,
+    dataset: '5 Dialect Corpus (12,000 items)',
+    model: 'Char-CNN + Transformer',
+    language: '5 Eastern Indo-Aryan Dialects',
+    method: 'Character adapter on subwords',
+    metric: 'Fragmentation rate: 48.3%',
+    result: 'Reduced OOV subwords by 31%',
+    limitation: 'High inference latency (2.4x)',
+    customColumns: {
+      'Pre-training Domain': 'Hybrid Subword-Char',
+      'Annotator Agreement': 'N/A (Lexical audit)',
+    },
+  },
+  {
+    id: 'mat-4',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-04',
+    paperTitle: 'Annotator Disagreement and Ethical Considerations in Dialectal Sentiment Datasets',
+    year: 2022,
+    dataset: '3 Public Regional Corpora',
+    model: 'Statistical & Inter-rater Audit',
+    language: 'Chatgaiya & Sylheti',
+    method: 'Multi-annotator demographic audit',
+    metric: 'Native kappa: 0.78 vs Non-native: 0.46',
+    result: '38% sarcasm misclassification',
+    limitation: 'No predictive ML model evaluated',
+    customColumns: {
+      'Pre-training Domain': 'Human Annotator Study',
+      'Annotator Agreement': 'Annotator disparity quantified',
+    },
+  },
+  {
+    id: 'mat-5',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-05',
+    paperTitle: 'Zero-Shot Cross-Lingual Transfer from Standard Bengali to Dialectal Varieties',
+    year: 2024,
+    dataset: 'Dialect-Zero (6,000 pairs)',
+    model: 'XLM-R & mBERT (Zero-shot)',
+    language: 'Chittagonian, Sylheti, Noakhailla',
+    method: 'Direct cross-lingual zero-shot',
+    metric: 'Delta Macro-F1: -21.4%',
+    result: 'Direct transfer severely degrades',
+    limitation: 'Zero-shot only; no parameter-efficient adapters',
+    customColumns: {
+      'Pre-training Domain': 'Cross-dialectal Transfer',
+      'Annotator Agreement': 'Standard benchmark',
+    },
+  },
+];
+
+export const initialEvidence: Evidence[] = [
+  {
+    id: 'ev-1',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-01',
+    paperTitle: 'Evaluating Multilingual Transformers on Chittagonian Dialectal Sentiment',
+    claim: 'XLM-R with phonetic subword regularization achieved 84.1% Macro-F1, outperforming mBERT by 4.9%.',
+    page: 8,
+    section: 'Results & Evaluation',
+    snippet:
+      'As reported in Table 4, XLM-R with phonetic subword regularization achieved 84.1% Macro-F1 (Accuracy 85.3%), whereas mBERT achieved 79.2% Macro-F1.',
+    evidenceType: 'empirical',
+    confidence: 0.96,
+    verificationStatus: 'supported',
+    location: 'Results → Table 4 → Page 8',
+    createdBy: 'Dr. Sarah Mahmud',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'ev-2',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-01',
+    paperTitle: 'Evaluating Multilingual Transformers on Chittagonian Dialectal Sentiment',
+    claim: 'Standard multilingual vocabularies cause severe subword fragmentation on dialectal phonology.',
+    page: 1,
+    section: 'Introduction',
+    snippet:
+      'We demonstrate that standard subword tokenizers suffer from catastrophic vocabulary fragmentation on dialectal phonology, causing attention dispersion.',
+    evidenceType: 'empirical',
+    confidence: 0.94,
+    verificationStatus: 'supported',
+    location: 'Introduction → Page 1',
+    createdBy: 'Dr. Sarah Mahmud',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'ev-3',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-02',
+    paperTitle: 'BanglaBERT vs XLM-R: Comparative Analysis in Regional Bengali Social Sentiment',
+    claim: 'BanglaBERT outperformed XLM-R by 2.1% Macro-F1 when pre-tokenization normalization was applied.',
+    page: 7,
+    section: 'Results & Discussion',
+    snippet:
+      'Contrary to prior studies favoring massive multilingual models, BanglaBERT achieved 81.3% Macro-F1 compared to 79.2% for XLM-R when text was pre-normalized.',
+    evidenceType: 'benchmark',
+    confidence: 0.92,
+    verificationStatus: 'supported',
+    location: 'Results & Discussion → Page 7',
+    createdBy: 'Dr. Sarah Mahmud',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'ev-4',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-03',
+    paperTitle: 'Subword Regularization and Lexical Coverage in Eastern Indo-Aryan Dialects',
+    claim: 'Chatgaiya tokens suffer from a 48.3% high-order fragmentation rate in standard SentencePiece.',
+    page: 5,
+    section: 'Subword Fragmentation Analysis',
+    snippet:
+      '48.3% of unique Chittagonian tokens split into three or more subwords when processed by standard multilingual vocabularies.',
+    evidenceType: 'empirical',
+    confidence: 0.95,
+    verificationStatus: 'supported',
+    location: 'Methodology → Section 4.2 → Page 5',
+    createdBy: 'Dr. Sarah Mahmud',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'ev-5',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-04',
+    paperTitle: 'Annotator Disagreement and Ethical Considerations in Dialectal Sentiment Datasets',
+    claim: 'Non-native annotators misinterpret colloquial sarcasm in 38% of negative dialectal sentences.',
+    page: 3,
+    section: 'Annotator Demographics & Reliability',
+    snippet:
+      'Non-native Bengali speakers misclassified colloquial sarcasm in 38% of negative instances, resulting in an inter-annotator Cohen kappa of 0.46.',
+    evidenceType: 'empirical',
+    confidence: 0.91,
+    verificationStatus: 'supported',
+    location: 'Study 1 → Section 3.1 → Page 3',
+    createdBy: 'Dr. Sarah Mahmud',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'ev-6',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-05',
+    paperTitle: 'Zero-Shot Cross-Lingual Transfer from Standard Bengali to Dialectal Varieties',
+    claim: 'Zero-shot cross-lingual transfer from Standard Bengali to Chittagonian degrades Macro-F1 by 21.4%.',
+    page: 4,
+    section: 'Zero-Shot Transfer Experiments',
+    snippet:
+      'Direct zero-shot transfer from Standard Bengali training data to Chittagonian test data resulted in a 21.4% drop in Macro F1 (from 83.2% to 61.8%).',
+    evidenceType: 'benchmark',
+    confidence: 0.97,
+    verificationStatus: 'supported',
+    location: 'Experiments → Section 4 → Page 4',
+    createdBy: 'Dr. Sarah Mahmud',
+    createdAt: new Date().toISOString(),
+  },
+];
+
+export const initialContradictions: Contradiction[] = [
+  {
+    id: 'contra-1',
+    projectId: DEMO_PROJECT_ID,
+    topic: 'Multilingual vs Monolingual Transformer Superiority on Dialectal Text',
+    paperAId: 'paper-demo-01',
+    paperATitle: 'Evaluating Multilingual Transformers on Chittagonian Dialectal Sentiment',
+    claimA: 'XLM-RoBERTa (multilingual) outperforms all monolingual models, reaching 84.1% Macro-F1.',
+    evidenceA:
+      'XLM-R with phonetic subword regularization achieved 84.1% Macro-F1, whereas mBERT achieved 79.2% and monolingual baselines lagged below 78%. (Page 8)',
+    pageA: 8,
+    paperBId: 'paper-demo-02',
+    paperBTitle: 'BanglaBERT vs XLM-R: Comparative Analysis in Regional Bengali Social Sentiment',
+    claimB: 'Monolingual BanglaBERT outperforms multilingual XLM-R by 2.1% Macro-F1.',
+    evidenceB:
+      'BanglaBERT achieved 81.3% Macro-F1 compared to 79.2% for XLM-R when text was pre-normalized. BanglaBERT retains language-specific morphological cues. (Page 7)',
+    pageB: 7,
+    potentialReasons: [
+      'Pre-processing Pipeline: Paper 1 applied phonetic subword regularization; Paper 2 used static slang dictionary normalization.',
+      'Evaluation Dataset: Paper 1 evaluated on native Chittagonian corpus (CSC-24); Paper 2 evaluated on mixed colloquial regional corpus (CRBC-23).',
+      'Hyperparameters: Learning rate differences (2e-5 vs 3e-5) and batch size variations (16 vs 32).',
+    ],
+    notes: 'Researcher Decision: The contradiction stems from the pre-processing stage. When subword regularization is omitted, BanglaBERT is indeed superior; with regularization, XLM-R scales better.',
+  },
+];
+
+export const initialGaps: ResearchGap[] = [
+  {
+    id: 'gap-1',
+    projectId: DEMO_PROJECT_ID,
+    title: 'Absence of Dual-Script (Bengali Script & Romanized Banglish) Unified Benchmark for Chatgaiya',
+    description:
+      'Social media users in Chittagong write interchangeably in Bengali script and Romanized English phonetics. Current research corpora exclusively benchmark one script, ignoring code-script switching in realistic feeds.',
+    category: 'missing_dataset',
+    supportingPaperIds: ['paper-demo-01', 'paper-demo-03'],
+    supportingPaperTitles: [
+      'Evaluating Multilingual Transformers on Chittagonian Dialectal Sentiment',
+      'Subword Regularization and Lexical Coverage in Eastern Indo-Aryan Dialects',
+    ],
+    contraryEvidence: 'No paper identified has tested dual-script joint embeddings for Chittagonian.',
+    confidence: 'high',
+    verificationStatus: 'Researcher Verified',
+    proposedDirection:
+      'Create a transliteration-invariant shared subword vocabulary and benchmark dual-script sentiment transfer.',
+  },
+  {
+    id: 'gap-2',
+    projectId: DEMO_PROJECT_ID,
+    title: 'Lack of Sarcasm and Pragmatics-Aware Disagreement Modeling in Dialect Datasets',
+    description:
+      'Annotator disagreement is treated as annotation noise to be averaged out, rather than an inherent signal of vernacular ambiguity and regional cultural sarcasm.',
+    category: 'methodological',
+    supportingPaperIds: ['paper-demo-04'],
+    supportingPaperTitles: [
+      'Annotator Disagreement and Ethical Considerations in Dialectal Sentiment Datasets',
+    ],
+    confidence: 'high',
+    verificationStatus: 'Researcher Verified',
+    proposedDirection:
+      'Adopt soft-label distribution training and multi-annotator perspective modeling instead of hard majority voting.',
+  },
+  {
+    id: 'gap-3',
+    projectId: DEMO_PROJECT_ID,
+    title: 'Missing Parameter-Efficient Fine-Tuning (LoRA / Adapters) for Dialectal Transfer',
+    description:
+      'Existing works either evaluate zero-shot transfer or full model fine-tuning. Low-rank adaptation (LoRA) specifically tailored for dialectal morphemes remains unexplored.',
+    category: 'repeated_limitation',
+    supportingPaperIds: ['paper-demo-02', 'paper-demo-05'],
+    supportingPaperTitles: [
+      'BanglaBERT vs XLM-R: Comparative Analysis in Regional Bengali Social Sentiment',
+      'Zero-Shot Cross-Lingual Transfer from Standard Bengali to Dialectal Varieties',
+    ],
+    confidence: 'moderate',
+    verificationStatus: 'Under Investigation',
+    proposedDirection:
+      'Train lightweight dialect-specific LoRA adapters on top of frozen multilingual foundational models.',
+  },
+  {
+    id: 'gap-4',
+    projectId: DEMO_PROJECT_ID,
+    title: 'Acoustic-to-Text Grounding Gap for Spoken Chittagonian',
+    description:
+      'Chatgaiya is primarily an oral dialect without an official written standard. Text-only NLP ignores pitch accents and tonal inflections which decisively reverse sentiment polarity in spoken discourse.',
+    category: 'underexplored_population',
+    supportingPaperIds: ['paper-demo-01', 'paper-demo-03'],
+    supportingPaperTitles: [
+      'Evaluating Multilingual Transformers on Chittagonian Dialectal Sentiment',
+      'Subword Regularization and Lexical Coverage in Eastern Indo-Aryan Dialects',
+    ],
+    confidence: 'exploratory',
+    verificationStatus: 'Under Investigation',
+    proposedDirection:
+      'Collect paired speech-text utterances to investigate multimodal acoustic-text sentiment classification.',
+  },
+];
+
+export const initialMemory: ResearchMemoryItem[] = [
+  {
+    id: 'mem-1',
+    projectId: DEMO_PROJECT_ID,
+    category: 'decision',
+    content:
+      'Adopted Macro-F1 as primary evaluation metric over Accuracy due to severe class imbalance in real-world dialectal commentary (negative sentiments predominate in political/civic posts).',
+    context: 'Lab Team Meeting — Week 2',
+    date: '2024-02-14',
+  },
+  {
+    id: 'mem-2',
+    projectId: DEMO_PROJECT_ID,
+    category: 'finding',
+    content:
+      'Chatgaiya morpheme `-বা` (future marker) and `-নে` (question particle) are split into single characters by standard BPE tokenizers, destroying syntactic dependency cues.',
+    context: 'Tokenizer token-level inspection',
+    date: '2024-02-28',
+  },
+  {
+    id: 'mem-3',
+    projectId: DEMO_PROJECT_ID,
+    category: 'terminology',
+    content:
+      'Chatgaiya (ISO 639-3: ctg): Eastern Indo-Aryan language. Also termed Chittagonian. Characterized by tonal variation, distinct pronominal forms, and non-standard postpositions.',
+    context: 'Linguistic reference documentation',
+    date: '2024-01-10',
+  },
+  {
+    id: 'mem-4',
+    projectId: DEMO_PROJECT_ID,
+    category: 'hypothesis',
+    content:
+      'Phonetic subword regularization will close the gap between native and zero-shot transfer by at least 50% without requiring additional manual labeling.',
+    context: 'Thesis hypothesis 2',
+    date: '2024-03-01',
+  },
+];
+
+export const initialNotes: ResearchNote[] = [
+  {
+    id: 'note-1',
+    projectId: DEMO_PROJECT_ID,
+    title: 'Literature Synthesis: Tokenizer Pathology in Indic Dialects',
+    content: `## Summary of Tokenizer Pathologies
+Across all analyzed papers (**Rahman et al., 2024**, **Islam & Khan, 2023**), the bottleneck in Indic dialectal NLP is **vocabulary mismatch**:
+
+1. Standard multilingual models (mBERT, XLM-R) were trained on Wikipedia and CC100.
+2. Dialectal text on social media has high orthographic variation.
+3. Chatgaiya words get split into 3+ tokens, causing attention maps to degrade.
+
+### Action Item for Our Lab
+We must implement a custom SentencePiece tokenizer trained on mixed Standard Bengali + 100k raw Chatgaiya social comments before transformer fine-tuning.`,
+    tags: ['Tokenizer', 'Subwords', 'Literature Review', 'XLM-R'],
+    linkedPaperId: 'paper-demo-01',
+    createdAt: new Date(Date.now() - 12 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 12 * 86400000).toISOString(),
+  },
+  {
+    id: 'note-2',
+    projectId: DEMO_PROJECT_ID,
+    title: 'Annotator Protocol Guidelines for Chittagonian Dialect',
+    content: `## Guidelines Established Following Barua et al. (2022)
+1. **Annotator Qualification**: Must be a native speaker born and raised in the Chittagong division.
+2. **Sarcasm Handling**: When an utterance uses polite standard honorifics with dialectal sarcastic idioms, tag as \`Negative (Sarcasm)\` rather than \`Positive\`.
+3. **Consensus Resolution**: Disagreements will not be resolved by majority voting; instead, the distribution of opinions will be saved for soft-loss cross-entropy training.`,
+    tags: ['Annotation', 'Ethics', 'Methodology'],
+    linkedPaperId: 'paper-demo-04',
+    createdAt: new Date(Date.now() - 8 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 8 * 86400000).toISOString(),
+  },
+];
+
+export const initialExperiments: MLExperiment[] = [
+  {
+    id: 'exp-1',
+    projectId: DEMO_PROJECT_ID,
+    name: 'XLM-R Base + Standard Fine-tuning',
+    model: 'xlm-roberta-base',
+    dataset: 'CSC-24 (Train: 3360, Val: 420, Test: 420)',
+    version: 'v1.0.0',
+    hyperparameters: {
+      learning_rate: '2e-5',
+      batch_size: 16,
+      epochs: 5,
+      weight_decay: 0.01,
+      warmup_ratio: 0.1,
+      max_seq_length: 128,
+    },
+    metrics: {
+      macro_f1: 0.778,
+      accuracy: 0.785,
+      precision: 0.781,
+      recall: 0.776,
+      eval_loss: 0.542,
+    },
+    status: 'completed',
+    notes: 'Baseline run. Noticeable fragmentation in subword representation.',
+    linkedPaperId: 'paper-demo-01',
+    createdAt: new Date(Date.now() - 18 * 86400000).toISOString(),
+  },
+  {
+    id: 'exp-2',
+    projectId: DEMO_PROJECT_ID,
+    name: 'XLM-R Base + Phonetic Subword Regularization',
+    model: 'xlm-roberta-base-phonetic-reg',
+    dataset: 'CSC-24 (Train: 3360, Val: 420, Test: 420)',
+    version: 'v1.2.0',
+    hyperparameters: {
+      learning_rate: '2e-5',
+      batch_size: 16,
+      epochs: 5,
+      subword_regularization_alpha: 0.1,
+      phonetic_dropout: 0.15,
+      weight_decay: 0.01,
+    },
+    metrics: {
+      macro_f1: 0.841,
+      accuracy: 0.853,
+      precision: 0.844,
+      recall: 0.839,
+      eval_loss: 0.398,
+    },
+    status: 'completed',
+    notes: 'Significant gain (+6.3% F1). Subword regularization successfully prevents overfitting on idiosyncratic spellings.',
+    linkedPaperId: 'paper-demo-01',
+    createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
+  },
+  {
+    id: 'exp-3',
+    projectId: DEMO_PROJECT_ID,
+    name: 'BanglaBERT + LoRA Dialect Adapter',
+    model: 'banglabert-lora-adapter',
+    dataset: 'CSC-24 (Train: 3360, Val: 420, Test: 420)',
+    version: 'v2.0.0-rc',
+    hyperparameters: {
+      lora_r: 16,
+      lora_alpha: 32,
+      lora_dropout: 0.1,
+      target_modules: 'query, value',
+      learning_rate: '1e-4',
+      batch_size: 32,
+      epochs: 8,
+    },
+    metrics: {
+      macro_f1: 0.826,
+      accuracy: 0.831,
+      precision: 0.829,
+      recall: 0.823,
+      eval_loss: 0.431,
+    },
+    status: 'completed',
+    notes: 'Trained only 1.2M parameters. Very fast convergence, competitive with full fine-tuning.',
+    linkedPaperId: 'paper-demo-02',
+    createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+  },
+];
+
+export const initialSystematicReview: SystematicReviewItem[] = [
+  {
+    id: 'sr-1',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-01',
+    paperTitle: 'Evaluating Multilingual Transformers on Chittagonian Dialectal Sentiment',
+    screeningStatus: 'included',
+    criteriaMatches: {
+      'Empirical Dialect NLP': true,
+      'Sentiment Classification': true,
+      'Reproducible Methodology': true,
+      'Peer-reviewed Conference': true,
+    },
+    fullTextReviewed: true,
+    reviewerNotes: 'Core inclusion paper. Provides primary dataset benchmark.',
+  },
+  {
+    id: 'sr-2',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-02',
+    paperTitle: 'BanglaBERT vs XLM-R: Comparative Analysis in Regional Bengali Social Sentiment',
+    screeningStatus: 'included',
+    criteriaMatches: {
+      'Empirical Dialect NLP': true,
+      'Sentiment Classification': true,
+      'Reproducible Methodology': true,
+      'Peer-reviewed Conference': true,
+    },
+    fullTextReviewed: true,
+    reviewerNotes: 'Contradiction source for monolingual vs multilingual model choice.',
+  },
+  {
+    id: 'sr-3',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-03',
+    paperTitle: 'Subword Regularization and Lexical Coverage in Eastern Indo-Aryan Dialects',
+    screeningStatus: 'included',
+    criteriaMatches: {
+      'Empirical Dialect NLP': true,
+      'Sentiment Classification': false,
+      'Reproducible Methodology': true,
+      'Peer-reviewed Conference': true,
+    },
+    fullTextReviewed: true,
+    reviewerNotes: 'Included for tokenizer pathology and lexical coverage metrics.',
+  },
+  {
+    id: 'sr-4',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-04',
+    paperTitle: 'Annotator Disagreement and Ethical Considerations in Dialectal Sentiment Datasets',
+    screeningStatus: 'included',
+    criteriaMatches: {
+      'Empirical Dialect NLP': true,
+      'Sentiment Classification': true,
+      'Reproducible Methodology': true,
+      'Peer-reviewed Conference': true,
+    },
+    fullTextReviewed: true,
+    reviewerNotes: 'Essential for ethical review and annotator reliability discussion.',
+  },
+  {
+    id: 'sr-5',
+    projectId: DEMO_PROJECT_ID,
+    paperId: 'paper-demo-05',
+    paperTitle: 'Zero-Shot Cross-Lingual Transfer from Standard Bengali to Dialectal Varieties',
+    screeningStatus: 'included',
+    criteriaMatches: {
+      'Empirical Dialect NLP': true,
+      'Sentiment Classification': true,
+      'Reproducible Methodology': true,
+      'Peer-reviewed Conference': true,
+    },
+    fullTextReviewed: true,
+    reviewerNotes: 'Benchmark for cross-lingual transfer deficit.',
+  },
+];
