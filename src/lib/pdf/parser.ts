@@ -1,5 +1,6 @@
 import zlib from 'zlib';
 import { DocumentChunk } from '../db/types';
+import { COMMON_DICTIONARY } from './dictionary';
 
 // Ensure DOMMatrix exists in Node.js / Serverless environments so pdfjs never errors
 if (typeof (globalThis as any).DOMMatrix === 'undefined') {
@@ -32,16 +33,16 @@ export interface PDFParseResult {
 }
 
 const SECTION_PATTERNS: Array<{ name: string; regex: RegExp }> = [
-  { name: 'Abstract', regex: /(?:^|\n|\b)\s*(?:1\.?\s*)?ABSTRACT\b/i },
-  { name: 'Introduction', regex: /(?:^|\n|\b)\s*(?:1\.?\s*|I\.?\s*)?INTRODUCTION\b/i },
-  { name: 'Related Work', regex: /(?:^|\n|\b)\s*(?:2\.?\s*|II\.?\s*)?(?:RELATED\s+WORK|LITERATURE\s+REVIEW|BACKGROUND)\b/i },
-  { name: 'Methodology', regex: /(?:^|\n|\b)\s*(?:3\.?\s*|III\.?\s*)?(?:METHODOLOGY|PROPOSED\s+(?:METHOD|ARCHITECTURE|FRAMEWORK)|METHODS|APPROACH)\b/i },
-  { name: 'Dataset & Preprocessing', regex: /(?:^|\n|\b)\s*(?:4\.?\s*|IV\.?\s*)?(?:DATASET|CORPUS|DATA\s+COLLECTION|PREPROCESSING)\b/i },
-  { name: 'Experiments & Setup', regex: /(?:^|\n|\b)\s*(?:5\.?\s*|V\.?\s*)?(?:EXPERIMENTS|EXPERIMENTAL\s+SETUP|EVALUATION\s+SETUP)\b/i },
-  { name: 'Results & Discussion', regex: /(?:^|\n|\b)\s*(?:6\.?\s*|VI\.?\s*)?(?:RESULTS|FINDINGS|RESULTS\s+AND\s+DISCUSSION|DISCUSSION)\b/i },
-  { name: 'Limitations', regex: /(?:^|\n|\b)\s*(?:7\.?\s*|VII\.?\s*)?(?:LIMITATIONS?|THREATS?\s+TO\s+VALIDITY)\b/i },
-  { name: 'Conclusion & Future Work', regex: /(?:^|\n|\b)\s*(?:8\.?\s*|VIII\.?\s*)?(?:CONCLUSION|CONCLUSIONS|FUTURE\s+WORK)\b/i },
-  { name: 'References', regex: /(?:^|\n|\b)\s*(?:9\.?\s*|IX\.?\s*)?(?:REFERENCES|BIBLIOGRAPHY)\b/i },
+  { name: 'Abstract', regex: /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?ABSTRACT\b/i },
+  { name: 'Introduction', regex: /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?INTRODUCTION\b/i },
+  { name: 'Related Work', regex: /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?(?:RELATED\s+WORK|LITERATURE\s+REVIEW|BACKGROUND)\b/i },
+  { name: 'Methodology', regex: /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?(?:METHODOLOGY|PROPOSED\s+(?:METHOD|ARCHITECTURE|FRAMEWORK)|METHODS|APPROACH)\b/i },
+  { name: 'Dataset & Preprocessing', regex: /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?(?:DATASET(?:\s+CONSTRUCTION|\s+DESCRIPTION)?|CORPUS|DATA\s+COLLECTION|PREPROCESSING)\b/i },
+  { name: 'Experiments & Setup', regex: /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?(?:EXPERIMENTS|EXPERIMENTAL\s+SETUP|EVALUATION\s+SETUP)\b/i },
+  { name: 'Results & Discussion', regex: /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?(?:RESULTS|FINDINGS|RESULTS\s+AND\s+DISCUSSION|DISCUSSION)\b/i },
+  { name: 'Limitations', regex: /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?(?:LIMITATIONS\b|THREATS\s+TO\s+VALIDITY\b|(?:Limitations?|Threats\s+to\s+validity)\s*[:\-]|(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*Limitations?\b|^Limitations?\s*$)/i },
+  { name: 'Conclusion & Future Work', regex: /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?(?:CONCLUSION|CONCLUSIONS|FUTURE\s+WORK)\b/i },
+  { name: 'References', regex: /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?(?:REFERENCES|BIBLIOGRAPHY)\b/i },
 ];
 
 function decodePdfString(rawStr: string): string {
@@ -125,61 +126,22 @@ function parseTjArray(arrayBody: string): string {
   return parts.join('').trim();
 }
 
-const COMMON_DICTIONARY = new Set([
-  'a', 'about', 'above', 'across', 'accuracy', 'acoustic', 'acoustics', 'address', 'after', 'against', 'all',
-  'almost', 'along', 'already', 'also', 'although', 'always', 'am', 'among', 'an', 'analysis', 'and', 'annotated',
-  'annotation', 'annotations', 'annotator', 'annotators', 'another', 'any', 'applied', 'approach', 'approaches',
-  'architectures', 'architecture', 'are', 'around', 'as', 'at', 'authors', 'based', 'baseline', 'baselines',
-  'be', 'because', 'been', 'before', 'being', 'benchmark', 'benchmarks', 'bengali', 'between', 'both', 'but',
-  'by', 'called', 'can', 'cannot', 'case', 'cases', 'chatgaiya', 'chittagonian', 'chittagong', 'clean',
-  'collected', 'collection', 'comparative', 'compare', 'compared', 'corpus', 'critical', 'current', 'currently',
-  'data', 'dataset', 'datasets', 'demonstrate', 'demonstrates', 'dependency', 'development', 'dialect',
-  'dialectal', 'dialects', 'dictionaries', 'dictionary', 'direct', 'distinct', 'do', 'does', 'due', 'during',
-  'each', 'early', 'empirical', 'empirically', 'encoders', 'encoder', 'error', 'errors', 'evaluating',
-  'evaluation', 'evaluations', 'even', 'every', 'field', 'first', 'following', 'for', 'formant', 'formants',
-  'formulate', 'formulation', 'found', 'four', 'from', 'further', 'future', 'general', 'generalizability',
-  'geographic', 'given', 'had', 'has', 'have', 'having', 'he', 'her', 'high', 'higher', 'his', 'how',
-  'however', 'i', 'if', 'in', 'including', 'indic', 'indo-aryan', 'interviews', 'into', 'investigate',
-  'investigating', 'investigates', 'is', 'it', 'its', 'item', 'items', 'just', 'language', 'languages',
-  'large', 'larger', 'less', 'limitation', 'limitations', 'limited', 'linguists', 'linguistic', 'low',
-  'low-resource', 'macro-f1', 'main', 'major', 'manually', 'many', 'may', 'mbert', 'method', 'methodology',
-  'methods', 'might', 'microphone', 'microphones', 'model', 'models', 'more', 'most', 'much', 'multilingual',
-  'must', 'native', 'natural', 'neither', 'neural', 'next', 'nlp', 'no', 'noise', 'non-standard', 'normalization',
-  'not', 'note', 'notes', 'now', 'number', 'numbers', 'obtained', 'of', 'off', 'often', 'on', 'one', 'only',
-  'or', 'order', 'orthography', 'other', 'others', 'our', 'out', 'outperforming', 'over', 'own', 'paper',
-  'papers', 'performance', 'phoneme', 'phonemes', 'phonetic', 'phonetics', 'points', 'possible', 'pre-aligned',
-  'preprocessing', 'pretraining', 'primary', 'problem', 'problems', 'processing', 'propose', 'proposed',
-  'proposes', 'public', 'rate', 'rates', 'raw', 'receptive', 'record', 'recorded', 'recording', 'recordings',
-  'regional', 'regularization', 'regularizer', 'related', 'report', 'reported', 'reports', 'research',
-  'researcher', 'resource', 'resources', 'restricts', 'restricted', 'result', 'results', 'sample', 'sampled',
-  'samples', 'scale', 'second', 'section', 'sections', 'selected', 'self-supervised', 'sentence', 'sentences',
-  'sentiment', 'set', 'sets', 'setup', 'several', 'should', 'show', 'shows', 'shown', 'significant',
-  'similarity', 'single', 'small', 'smaller', 'so', 'social', 'some', 'sound', 'source', 'sources',
-  'southeastern', 'speakers', 'speaker', 'speech', 'standard', 'standardized', 'state', 'statistical',
-  'still', 'structure', 'structured', 'studio', 'studio-only', 'study', 'studies', 'subword', 'subwords',
-  'such', 'suggest', 'suggests', 'table', 'tables', 'targeted', 'target', 'techniques', 'technique', 'than',
-  'that', 'the', 'their', 'them', 'then', 'there', 'these', 'they', 'this', 'three', 'through', 'to',
-  'tokenization', 'tokens', 'token', 'towards', 'trained', 'training', 'transfer', 'transformer', 'transformers',
-  'transliteration', 'two', 'under', 'unique', 'unit', 'units', 'until', 'up', 'upon', 'us', 'use', 'used',
-  'users', 'user', 'uses', 'using', 'utterances', 'utterance', 'validation', 'vanilla', 'variations',
-  'variation', 'varieties', 'variety', 'various', 'very', 'vocalic', 'vocabulary', 'was', 'we', 'well',
-  'were', 'what', 'when', 'where', 'which', 'while', 'who', 'will', 'with', 'within', 'without', 'word',
-  'words', 'work', 'works', 'working', 'would', 'xlm-r', 'xlm-roberta', 'year', 'years', 'yield', 'zero-shot'
-]);
-
 export function segmentGluedWord(token: string): string {
-  if (token.length <= 15 || !/^[a-zA-Z]+$/.test(token)) return token;
+  if (token.length < 5) return token;
+  if (COMMON_DICTIONARY.has(token.toLowerCase())) return token;
+  if (!/^[a-zA-Z]+$/.test(token)) return token;
 
   const n = token.length;
   const lower = token.toLowerCase();
 
+  // 1. Exact DP dictionary segmentation
   const dp = new Array(n + 1).fill(-Infinity);
   const parent = new Array(n + 1).fill(-1);
   dp[0] = 0;
 
   for (let i = 0; i < n; i++) {
     if (dp[i] === -Infinity) continue;
-    for (let len = 1; len <= Math.min(25, n - i); len++) {
+    for (let len = 1; len <= Math.min(30, n - i); len++) {
       const sub = lower.slice(i, i + len);
       if (COMMON_DICTIONARY.has(sub)) {
         const score = dp[i] + (len * len);
@@ -192,14 +154,24 @@ export function segmentGluedWord(token: string): string {
   }
 
   if (dp[n] > 0) {
-    const result: string[] = [];
+    const pieces: string[] = [];
     let curr = n;
     while (curr > 0) {
       const prev = parent[curr];
-      result.unshift(token.slice(prev, curr));
+      pieces.unshift(token.slice(prev, curr));
       curr = prev;
     }
-    return result.join(' ');
+    // Reject false-positive segmentation if any two consecutive pieces have length <= 2 (e.g. "at i on")
+    let hasConsecutiveShort = false;
+    for (let i = 0; i < pieces.length - 1; i++) {
+      if (pieces[i].length <= 2 && pieces[i + 1].length <= 2) {
+        hasConsecutiveShort = true;
+        break;
+      }
+    }
+    if (!hasConsecutiveShort) {
+      return pieces.join(' ');
+    }
   }
 
   return token;
@@ -207,9 +179,22 @@ export function segmentGluedWord(token: string): string {
 
 export function normalizeExtractedText(text: string): string {
   if (!text) return '';
-  return text
+
+  // 1. Spacing after punctuation when glued immediately to letters
+  // Avoid touching decimals (18.75), URLs (https://), DOIs (10.1016/...)
+  let normalized = text
+    .replace(/,([a-zA-Z])/g, ', $1')
+    .replace(/;([a-zA-Z])/g, '; $1')
+    .replace(/([a-z])\.([A-Z])/g, '$1. $2')
+    .replace(/([!?])([A-Z])/g, '$1 $2');
+
+  // 2. Tokenize and segment glued words
+  return normalized
     .split(/\s+/)
     .map((token) => {
+      // Don't touch URLs, DOIs, emails, file paths
+      if (/^https?:|^doi:|^10\.\d+|[@\/\\#]/i.test(token)) return token;
+
       const match = token.match(/^([(\[{'\"“‘]*)([a-zA-Z0-9_-]+)([)\]}'\"”’.,;:!?]*)$/);
       if (match) {
         const prefix = match[1];
@@ -591,28 +576,24 @@ export async function parsePdfBuffer(
         if (!trimmed) continue;
 
         // Check if line matches a new section header
+        let detectedSection: string | null = null;
         for (const pattern of SECTION_PATTERNS) {
           if (pattern.regex.test(trimmed)) {
-            if (currentChunkText.trim().length > 30) {
-              chunks.push({
-                paperId,
-                paper_id: paperId,
-                pageNumber: page,
-                page_number: page,
-                sectionName: currentSection,
-                section: currentSection,
-                chunkIndex: chunkIndex++,
-                content: normalizeExtractedText(currentChunkText.trim()),
-              });
-              currentChunkText = '';
+            // Standalone or header line check: if longer than 80 chars, must have numbering/colon
+            if (trimmed.length > 80 && !/^(?:\d+[\.\)]|[IVXLCDM]+\.?|[-•*]|\w+\s*:)/.test(trimmed)) {
+              continue;
             }
-            currentSection = pattern.name;
+            detectedSection = pattern.name;
             break;
           }
         }
 
-        // Inline section detection (e.g. "Limitations: Our model...")
-        if (/limitations?|threats?\s+to\s+validity/i.test(trimmed) && currentSection !== 'Limitations') {
+        // Strict inline section detection (e.g. "Limitations: Our model...")
+        if (!detectedSection && /^(?:(?:\d+[\.\)]|[IVXLCDM]+\.?)\s*)?(?:Limitations?|Threats\s+to\s+validity)\s*[:\-]/i.test(trimmed)) {
+          detectedSection = 'Limitations';
+        }
+
+        if (detectedSection && detectedSection !== currentSection) {
           if (currentChunkText.trim().length > 30) {
             chunks.push({
               paperId,
@@ -626,7 +607,7 @@ export async function parsePdfBuffer(
             });
             currentChunkText = '';
           }
-          currentSection = 'Limitations';
+          currentSection = detectedSection;
         }
 
         currentChunkText += (currentChunkText ? ' ' : '') + trimmed;

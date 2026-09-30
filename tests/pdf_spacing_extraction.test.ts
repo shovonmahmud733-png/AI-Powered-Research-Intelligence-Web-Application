@@ -346,4 +346,37 @@ ET
     expect(text).toContain('This research uses a native Chittagonian dialect resource.');
     expect(text).not.toContain('ThisresearchusesanativeChittagoniandialectresource');
   });
+
+  it('17. Complex glued punctuation: correctly restores spaces across commas, periods, and clauses', () => {
+    const gluedWithPunctuation =
+      'byourresearchteam,notadaptedorreusedfromanyexistingdialectresource.Textwillbecollectedfrompubliccomments';
+    const normalized = normalizeExtractedText(gluedWithPunctuation);
+    expect(normalized).toBe(
+      'by our research team, not adapted or reused from any existing dialect resource. Text will be collected from public comments'
+    );
+  });
+
+  it('18. Section isolation: mid-sentence limitations mention inside Dataset section does not flip section label', async () => {
+    const stream = `
+BT
+/F1 14 Tf
+50 720 Td
+(DATASET & PREPROCESSING) Tj
+0 -30 Td
+/F1 10 Tf
+(Our approach overcomes the limitations of prior datasets by curating a 5000 sentence corpus.) Tj
+0 -30 Td
+(Annotations were performed by three native linguists with Cohen kappa 0.88.) Tj
+ET
+`;
+    const pdf = createPdfWithContent(stream);
+    const result = await parsePdfBuffer(pdf, 'test-dataset-no-flip');
+
+    expect(result.chunks.length).toBeGreaterThan(0);
+    // Every chunk on this page MUST be Dataset & Preprocessing, NOT Limitations!
+    for (const c of result.chunks) {
+      expect(c.sectionName).toBe('Dataset & Preprocessing');
+      expect(c.sectionName).not.toBe('Limitations');
+    }
+  });
 });

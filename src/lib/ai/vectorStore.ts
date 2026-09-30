@@ -117,8 +117,44 @@ export class VectorStore {
         }
       });
 
-      // Bonus for section relevance (e.g. asking about "limitation" and section is "Limitations")
+      // Intent-aware section relevance & penalty
       const sectionLower = (chunk.sectionName || chunk.section || '').toLowerCase();
+      const qLower = query.toLowerCase();
+
+      const isDatasetQuery = /dataset|corpus|data|curat|collection|annotation|preprocessing|samples/i.test(qLower);
+      const isLimitationQuery = /limitat|threat|constraint|drawback|bottleneck|restrict|weakness/i.test(qLower);
+      const isMethodQuery = /method|architecture|model|framework|approach|algorithm|technique|pipeline/i.test(qLower);
+      const isResultQuery = /result|evaluat|metric|accuracy|f1|score|finding|outperform|baseline|table/i.test(qLower);
+
+      if (isDatasetQuery) {
+        if (/data|corpus|preprocess|collect|curat|resource/i.test(sectionLower)) {
+          tfidfScore += 2.5;
+          matchedTokensCount += 2;
+        } else if (/limit|threat/i.test(sectionLower)) {
+          tfidfScore = Math.max(0, tfidfScore - 1.5);
+        }
+      } else if (isLimitationQuery) {
+        if (/limit|threat|constraint/i.test(sectionLower)) {
+          tfidfScore += 2.5;
+          matchedTokensCount += 2;
+        }
+      } else if (isMethodQuery) {
+        if (/method|approach|architect|model|framework|algorithm/i.test(sectionLower)) {
+          tfidfScore += 2.5;
+          matchedTokensCount += 2;
+        } else if (/limit|threat/i.test(sectionLower)) {
+          tfidfScore = Math.max(0, tfidfScore - 1.5);
+        }
+      } else if (isResultQuery) {
+        if (/result|finding|evaluat|discussion|performance/i.test(sectionLower)) {
+          tfidfScore += 2.5;
+          matchedTokensCount += 2;
+        } else if (/limit|threat/i.test(sectionLower)) {
+          tfidfScore = Math.max(0, tfidfScore - 1.5);
+        }
+      }
+
+      // Bonus for general section token matches
       queryTokens.forEach((qTerm, qIdx) => {
         const qStem = queryStems[qIdx];
         if (

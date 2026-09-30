@@ -132,7 +132,12 @@ class OfflineAcademicEngine implements LLMProvider {
     } else if (qLower.includes('evidence') || qLower.includes('verify') || qLower.includes('claim')) {
       synthesis = `Grounded evidence verification from the project library:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\n**Evidence Grounding**:\n- **Source Section**: ${primaryChunk.chunk.sectionName}\n- **Page Number**: ${primaryChunk.chunk.pageNumber}\n- **Confidence**: High (${Math.round(primaryChunk.score * 100)}% retrieval confidence)\n- **Verification Status**: Empirically documented in published manuscript.`;
     } else if (qLower.includes('dataset') || qLower.includes('corpus') || qLower.includes('data')) {
-      const dataChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('data') || c.chunk.content.toLowerCase().includes('data') || c.chunk.content.toLowerCase().includes('corpus'));
+      const dataChunk =
+        chunks.find((c) => /data|corpus|collect|curat/i.test(c.chunk.sectionName) && !/limit|threat/i.test(c.chunk.sectionName)) ||
+        chunks.find((c) => /data|corpus/i.test(c.chunk.sectionName)) ||
+        chunks.find((c) => !/limit|threat/i.test(c.chunk.sectionName) && (/data|corpus|dataset/i.test(c.chunk.content))) ||
+        chunks.find((c) => !/limit|threat/i.test(c.chunk.sectionName)) ||
+        chunks[0];
       if (dataChunk) {
         synthesis = `Based on the paper's documentation in the **${dataChunk.chunk.sectionName}** section (Page ${dataChunk.chunk.pageNumber}):\n\n> "${dataChunk.chunk.content.substring(0, 300)}..."\n\nThe authors outline their data curation, annotation guidelines, and preprocessing procedures as detailed in the passage above.`;
       } else {
@@ -140,7 +145,11 @@ class OfflineAcademicEngine implements LLMProvider {
         evidenceList.length = 0;
       }
     } else if (qLower.includes('method') || qLower.includes('architecture') || qLower.includes('model') || qLower.includes('approach')) {
-      const methodChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('method') || c.chunk.sectionName.toLowerCase().includes('approach') || c.chunk.content.toLowerCase().includes('model'));
+      const methodChunk =
+        chunks.find((c) => /method|approach|architect|model/i.test(c.chunk.sectionName) && !/limit|threat/i.test(c.chunk.sectionName)) ||
+        chunks.find((c) => /method|approach|architect|model/i.test(c.chunk.sectionName)) ||
+        chunks.find((c) => !/limit|threat/i.test(c.chunk.sectionName) && /method|model|architect/i.test(c.chunk.content)) ||
+        chunks[0];
       if (methodChunk) {
         synthesis = `According to the **${methodChunk.chunk.sectionName}** section (Page ${methodChunk.chunk.pageNumber}):\n\n> "${methodChunk.chunk.content.substring(0, 300)}..."\n\nThe authors describe their theoretical formulation and experimental methodology as evidenced above.`;
       } else {
@@ -148,7 +157,11 @@ class OfflineAcademicEngine implements LLMProvider {
         evidenceList.length = 0;
       }
     } else if (qLower.includes('result') || qLower.includes('finding') || qLower.includes('metric') || qLower.includes('score') || qLower.includes('evaluat')) {
-      const resChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('result') || c.chunk.sectionName.toLowerCase().includes('eval') || c.chunk.content.toLowerCase().includes('%') || c.chunk.content.toLowerCase().includes('table'));
+      const resChunk =
+        chunks.find((c) => /result|eval|finding/i.test(c.chunk.sectionName) && !/limit|threat/i.test(c.chunk.sectionName)) ||
+        chunks.find((c) => /result|eval|finding/i.test(c.chunk.sectionName)) ||
+        chunks.find((c) => !/limit|threat/i.test(c.chunk.sectionName) && (/%|table|baseline|outperform/i.test(c.chunk.content))) ||
+        chunks[0];
       if (resChunk) {
         synthesis = `As documented in **${resChunk.chunk.sectionName}** (Page ${resChunk.chunk.pageNumber}):\n\n> "${resChunk.chunk.content.substring(0, 300)}..."\n\nThe reported statistical measurements and comparative baselines validate the authors' empirical claims.`;
       } else {
@@ -196,7 +209,7 @@ class OfflineAcademicEngine implements LLMProvider {
     }
 
     return {
-      answer: normalizeExtractedText(synthesis),
+      answer: synthesis,
       evidence: evidenceList.map((e) => ({ ...e, snippet: normalizeExtractedText(e.snippet) })),
       modelUsed: 'offline-academic-reasoner-v1',
       provider: 'Local Academic Reasoning Engine',

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../src/lib/db';
 import { researchChatEngine } from '../src/lib/ai/chatEngine';
 import { Paper, DocumentChunk } from '../src/lib/db/types';
+import { normalizeExtractedText } from '../src/lib/pdf/parser';
 
 describe('Single Paper Deep Analysis Mode Tests', () => {
   const userId = 'usr_researcher_01';
@@ -643,5 +644,125 @@ describe('Single Paper Deep Analysis Mode Tests', () => {
     expect(resourceSource).toBeDefined();
     expect(resourceSource!.snippet).not.toContain('ThisresearchusesanativeChittagoniandialectresource');
     expect(resourceSource!.snippet).toContain('This research uses a native Chittagonian dialect resource');
+  });
+
+  it('FINAL 5 TARGET TESTS: dataset, limitations, methodology, results, and unevidenced queries with strict section accuracy', async () => {
+    // 1. Dataset query
+    const datasetRes = await researchChatEngine.generateResponse({
+      projectId,
+      userId,
+      scope: 'paper',
+      paperId: paperA.id,
+      searchAcrossLibrary: false,
+      userMessage: 'What dataset did the authors use?',
+      clientPapers: [paperA, paperB],
+      clientChunks: [...chunksPaperA, ...chunksPaperB],
+    });
+    expect(datasetRes.sources.length).toBeGreaterThan(0);
+    expect(datasetRes.content).toContain('Dataset Construction');
+    expect(datasetRes.content).not.toContain('Limitations section');
+    const topDatasetSource = datasetRes.sources[0];
+    expect(topDatasetSource.section).toBe('Dataset Construction');
+    expect(topDatasetSource.paperId).toBe(paperA.id);
+
+    // 2. Limitations query
+    const limRes = await researchChatEngine.generateResponse({
+      projectId,
+      userId,
+      scope: 'paper',
+      paperId: paperA.id,
+      searchAcrossLibrary: false,
+      userMessage: 'what are the limitations??',
+      clientPapers: [paperA, paperB],
+      clientChunks: [...chunksPaperA, ...chunksPaperB],
+    });
+    expect(limRes.sources.length).toBeGreaterThan(0);
+    expect(limRes.content).toContain('Limitations');
+    const topLimSource = limRes.sources[0];
+    expect(topLimSource.section).toContain('Limitations');
+    expect(topLimSource.paperId).toBe(paperA.id);
+
+    // 3. Methodology query
+    const methodRes = await researchChatEngine.generateResponse({
+      projectId,
+      userId,
+      scope: 'paper',
+      paperId: paperA.id,
+      searchAcrossLibrary: false,
+      userMessage: 'What methodology did the authors use?',
+      clientPapers: [paperA, paperB],
+      clientChunks: [...chunksPaperA, ...chunksPaperB],
+    });
+    expect(methodRes.sources.length).toBeGreaterThan(0);
+    expect(methodRes.content).toContain('Methodology & Model Architecture');
+    const topMethodSource = methodRes.sources[0];
+    expect(topMethodSource.section).toBe('Methodology & Model Architecture');
+    expect(topMethodSource.paperId).toBe(paperA.id);
+
+    // 4. Results query
+    const resultRes = await researchChatEngine.generateResponse({
+      projectId,
+      userId,
+      scope: 'paper',
+      paperId: paperA.id,
+      searchAcrossLibrary: false,
+      userMessage: 'What were the main results?',
+      clientPapers: [paperA, paperB],
+      clientChunks: [...chunksPaperA, ...chunksPaperB],
+    });
+    expect(resultRes.sources.length).toBeGreaterThan(0);
+    expect(resultRes.content).toContain('Results & Discussion');
+    const topResultSource = resultRes.sources[0];
+    expect(topResultSource.section).toBe('Results & Discussion');
+    expect(topResultSource.paperId).toBe(paperA.id);
+
+    // 5. Unevidenced question
+    const unevidencedRes = await researchChatEngine.generateResponse({
+      projectId,
+      userId,
+      scope: 'paper',
+      paperId: paperA.id,
+      searchAcrossLibrary: false,
+      userMessage: 'What quantum annealing temperature was calibrated on the D-Wave quantum annealer?',
+      clientPapers: [paperA, paperB],
+      clientChunks: [...chunksPaperA, ...chunksPaperB],
+    });
+    expect(unevidencedRes.content).toContain('Insufficient evidence in the selected paper');
+    expect(unevidencedRes.sources.length).toBe(0);
+  });
+
+  it('Word Spacing Verification on multi-clause glued text: normalizes clauses with commas and periods', async () => {
+    const multiClauseChunk: DocumentChunk = {
+      id: 'chunk_glued_02',
+      userId: userId,
+      projectId: projectId,
+      paperId: paperA.id,
+      documentId: `doc-${paperA.id}`,
+      pageNumber: 2,
+      sectionName: 'Dataset Construction',
+      chunkIndex: 11,
+      content: 'byourresearchteam,notadaptedorreusedfromanyexistingdialectresource.Textwillbecollectedfrompubliccomments',
+      sourceFilename: 'paper-a.pdf',
+    };
+
+    const res = await researchChatEngine.generateResponse({
+      projectId,
+      userId,
+      scope: 'paper',
+      paperId: paperA.id,
+      searchAcrossLibrary: false,
+      userMessage: 'What text was collected by our research team, not adapted or reused from any existing dialect resource?',
+      clientPapers: [paperA],
+      clientChunks: [multiClauseChunk],
+    });
+
+    const targetSource = res.sources.find((s) => s.chunkId === 'chunk_glued_02') || res.sources[0];
+    expect(targetSource.snippet).toContain('by our research team, not adapted or reused from any existing dialect resource');
+    expect(targetSource.snippet).not.toContain('byourresearchteam');
+    expect(res.content).toContain('by our research team, not adapted or reused from any existing dialect resource. Text will be collected from public comments');
+    expect(res.content).not.toContain('byourresearchteam');
+    expect(normalizeExtractedText(multiClauseChunk.content)).toBe(
+      'by our research team, not adapted or reused from any existing dialect resource. Text will be collected from public comments'
+    );
   });
 });
