@@ -92,7 +92,8 @@ class OfflineAcademicEngine implements LLMProvider {
           c.chunk.content.toLowerCase().includes('limitation') ||
           c.chunk.content.toLowerCase().includes('constraint') ||
           c.chunk.content.toLowerCase().includes('restrict') ||
-          c.chunk.content.toLowerCase().includes('future work')
+          c.chunk.content.toLowerCase().includes('threat') ||
+          c.chunk.content.toLowerCase().includes('bottleneck')
       );
 
       if (limChunks.length > 0) {
@@ -107,11 +108,9 @@ class OfflineAcademicEngine implements LLMProvider {
             return `${i + 1}. **${c.chunk.sectionName}** (Page ${c.chunk.pageNumber}):\n   > "${limSentence.trim()}"`;
           })
           .join('\n\n')}\n\n**AI Methodological Note**: These limitations represent author-identified constraints regarding dataset scale, evaluation boundaries, or modeling assumptions. Review the source drawer below for complete contextual passages.`;
-      } else if (meaningfulChunks.length > 0) {
-        const topChunk = meaningfulChunks[0];
-        synthesis = `Based on the extracted text from **${paperTitle}**, no explicit "Limitations" section was declared by the authors in the document. However, based on the documented experimental scope in **${topChunk.chunk.sectionName}** (Page ${topChunk.chunk.pageNumber}):\n\n> "${topChunk.chunk.content.substring(0, 280)}..."\n\n**Methodological Observation**: The research scope is bounded by the specific baselines, datasets, and benchmark constraints reported above.`;
       } else {
-        synthesis = `Based on the available metadata for **${paperTitle}**, the document does not contain an explicit limitations section. Review the paper reader or structured analysis tab for detailed empirical attributes.`;
+        synthesis = `Insufficient evidence in the selected paper regarding this inquiry. The document does not contain an explicit limitations section or documented evaluation constraints.`;
+        evidenceList.length = 0;
       }
     } else if (qLower.includes('compare') || qLower.includes('versus') || qLower.includes('vs')) {
       synthesis = `A comparative analysis across the retrieved literature reveals significant trade-offs in methodology and empirical outcomes:\n\n${chunks
@@ -132,16 +131,34 @@ class OfflineAcademicEngine implements LLMProvider {
     } else if (qLower.includes('evidence') || qLower.includes('verify') || qLower.includes('claim')) {
       synthesis = `Grounded evidence verification from the project library:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\n**Evidence Grounding**:\n- **Source Section**: ${primaryChunk.chunk.sectionName}\n- **Page Number**: ${primaryChunk.chunk.pageNumber}\n- **Confidence**: High (${Math.round(primaryChunk.score * 100)}% retrieval confidence)\n- **Verification Status**: Empirically documented in published manuscript.`;
     } else if (qLower.includes('dataset') || qLower.includes('corpus') || qLower.includes('data')) {
-      const dataChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('data') || c.chunk.content.toLowerCase().includes('data') || c.chunk.content.toLowerCase().includes('corpus')) || primaryChunk;
-      synthesis = `Based on the paper's documentation in the **${dataChunk.chunk.sectionName}** section (Page ${dataChunk.chunk.pageNumber}):\n\n> "${dataChunk.chunk.content.substring(0, 300)}..."\n\nThe authors outline their data curation, annotation guidelines, and preprocessing procedures as detailed in the passage above.`;
+      const dataChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('data') || c.chunk.content.toLowerCase().includes('data') || c.chunk.content.toLowerCase().includes('corpus'));
+      if (dataChunk) {
+        synthesis = `Based on the paper's documentation in the **${dataChunk.chunk.sectionName}** section (Page ${dataChunk.chunk.pageNumber}):\n\n> "${dataChunk.chunk.content.substring(0, 300)}..."\n\nThe authors outline their data curation, annotation guidelines, and preprocessing procedures as detailed in the passage above.`;
+      } else {
+        synthesis = `Insufficient evidence in the selected paper regarding dataset specifications.`;
+        evidenceList.length = 0;
+      }
     } else if (qLower.includes('method') || qLower.includes('architecture') || qLower.includes('model') || qLower.includes('approach')) {
-      const methodChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('method') || c.chunk.sectionName.toLowerCase().includes('approach') || c.chunk.content.toLowerCase().includes('model')) || primaryChunk;
-      synthesis = `According to the **${methodChunk.chunk.sectionName}** section (Page ${methodChunk.chunk.pageNumber}):\n\n> "${methodChunk.chunk.content.substring(0, 300)}..."\n\nThe authors describe their theoretical formulation and experimental methodology as evidenced above.`;
+      const methodChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('method') || c.chunk.sectionName.toLowerCase().includes('approach') || c.chunk.content.toLowerCase().includes('model'));
+      if (methodChunk) {
+        synthesis = `According to the **${methodChunk.chunk.sectionName}** section (Page ${methodChunk.chunk.pageNumber}):\n\n> "${methodChunk.chunk.content.substring(0, 300)}..."\n\nThe authors describe their theoretical formulation and experimental methodology as evidenced above.`;
+      } else {
+        synthesis = `Insufficient evidence in the selected paper regarding methodology details.`;
+        evidenceList.length = 0;
+      }
     } else if (qLower.includes('result') || qLower.includes('finding') || qLower.includes('metric') || qLower.includes('score') || qLower.includes('evaluat')) {
-      const resChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('result') || c.chunk.sectionName.toLowerCase().includes('eval') || c.chunk.content.toLowerCase().includes('%') || c.chunk.content.toLowerCase().includes('table')) || primaryChunk;
-      synthesis = `As documented in **${resChunk.chunk.sectionName}** (Page ${resChunk.chunk.pageNumber}):\n\n> "${resChunk.chunk.content.substring(0, 300)}..."\n\nThe reported statistical measurements and comparative baselines validate the authors' empirical claims.`;
-    } else {
+      const resChunk = chunks.find((c) => c.chunk.sectionName.toLowerCase().includes('result') || c.chunk.sectionName.toLowerCase().includes('eval') || c.chunk.content.toLowerCase().includes('%') || c.chunk.content.toLowerCase().includes('table'));
+      if (resChunk) {
+        synthesis = `As documented in **${resChunk.chunk.sectionName}** (Page ${resChunk.chunk.pageNumber}):\n\n> "${resChunk.chunk.content.substring(0, 300)}..."\n\nThe reported statistical measurements and comparative baselines validate the authors' empirical claims.`;
+      } else {
+        synthesis = `Insufficient evidence in the selected paper regarding results and evaluations.`;
+        evidenceList.length = 0;
+      }
+    } else if (primaryChunk.score >= 0.25 || qLower.includes('summar') || qLower.includes('about') || qLower.includes('what') || qLower.includes('overview')) {
       synthesis = `Regarding your inquiry on *" ${req.prompt} "*:\n\nDirect evidence from **${primaryChunk.chunk.sectionName}** (Page ${primaryChunk.chunk.pageNumber}) of **${paperTitle}** states:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\nThis passage provides the primary grounding for the investigation within the retrieved paper content.`;
+    } else {
+      synthesis = `Insufficient evidence in the selected paper regarding this inquiry. No matching empirical passages were located.`;
+      evidenceList.length = 0;
     }
 
     return {

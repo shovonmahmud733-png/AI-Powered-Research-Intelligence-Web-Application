@@ -79,15 +79,35 @@ export async function POST(req: Request) {
 
     db.createPaper(paper);
 
-    // 4. Save Chunks
-    const fullChunks: DocumentChunk[] = parseResult.chunks.map((c, i) => ({
-      id: `chunk-${paperId}-${i}`,
-      paperId,
-      pageNumber: c.pageNumber,
-      sectionName: c.sectionName,
-      chunkIndex: c.chunkIndex,
-      content: c.content,
-    }));
+    // 4. Save Chunks with Mandatory Immutable Document Metadata
+    const project = db.getProjectById(projectId);
+    const userId = project?.userId || 'usr_default';
+    const documentId = `doc-${paperId}`;
+
+    const fullChunks: DocumentChunk[] = parseResult.chunks.map((c, i) => {
+      const chunkId = `chunk-${paperId}-${i}`;
+      return {
+        id: chunkId,
+        chunk_id: chunkId,
+        user_id: userId,
+        userId: userId,
+        project_id: projectId,
+        projectId: projectId,
+        paper_id: paperId,
+        paperId: paperId,
+        document_id: documentId,
+        documentId: documentId,
+        page_number: c.pageNumber,
+        pageNumber: c.pageNumber,
+        section: c.sectionName,
+        sectionName: c.sectionName,
+        chunkIndex: c.chunkIndex,
+        content: c.content,
+        source_filename: file.name,
+        sourceFilename: file.name,
+        doi: paper.doi || '',
+      };
+    });
 
     if (fullChunks.length > 0) {
       db.addChunks(fullChunks);

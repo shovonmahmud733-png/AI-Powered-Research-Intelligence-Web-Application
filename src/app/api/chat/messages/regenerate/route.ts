@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { researchChatEngine } from '@/lib/ai/chatEngine';
+import { getSessionUser } from '@/lib/auth/session';
 
 export async function POST(req: Request) {
   try {
-    const { sessionId, projectId, scope = 'project', paperId } = await req.json();
+    const user = getSessionUser(req);
+    const { sessionId, projectId, scope = 'project', paperId, searchAcrossLibrary = false } = await req.json();
 
     if (!sessionId || !projectId) {
       return NextResponse.json({ error: 'sessionId and projectId are required' }, { status: 400 });
@@ -28,12 +30,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No user message found to regenerate' }, { status: 400 });
     }
 
-    // Generate new response
+    // Generate new response with strict isolation
     const result = await researchChatEngine.generateResponse({
       sessionId,
       projectId,
+      userId: user?.id,
       scope,
       paperId,
+      searchAcrossLibrary,
       userMessage: lastUserMessage,
       history: messages,
     });

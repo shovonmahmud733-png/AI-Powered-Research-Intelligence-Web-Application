@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { researchChatEngine } from '@/lib/ai/chatEngine';
+import { getSessionUser } from '@/lib/auth/session';
 import { ChatMessage } from '@/lib/db/types';
 
 export async function GET(req: Request) {
@@ -16,8 +17,19 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const user = getSessionUser(req);
     const body = await req.json();
-    const { sessionId, projectId, content, scope = 'project', paperId, stream = false, clientPapers, clientChunks } = body;
+    const {
+      sessionId,
+      projectId,
+      content,
+      scope = 'project',
+      paperId,
+      searchAcrossLibrary = false,
+      stream = false,
+      clientPapers,
+      clientChunks,
+    } = body;
 
     if (!sessionId || !projectId || !content) {
       return NextResponse.json(
@@ -38,7 +50,21 @@ export async function POST(req: Request) {
     // Synchronize clientChunks into db if not present in this serverless container
     if (clientChunks && Array.isArray(clientChunks) && clientChunks.length > 0) {
       const existingChunkIds = new Set(db.getChunksByProject(projectId).map((c) => c.id));
-      const chunksToAdd = clientChunks.filter((c: any) => !existingChunkIds.has(c.id));
+      const chunksToAdd = clientChunks
+        .filter((c: any) => !existingChunkIds.has(c.id))
+        .map((c: any) => ({
+          ...c,
+          user_id: c.user_id || c.userId || user?.id || 'usr_default',
+          userId: c.userId || c.user_id || user?.id || 'usr_default',
+          project_id: c.project_id || c.projectId || projectId,
+          projectId: c.projectId || c.project_id || projectId,
+          document_id: c.document_id || c.documentId || `doc-${c.paperId || c.paper_id}`,
+          documentId: c.documentId || c.document_id || `doc-${c.paperId || c.paper_id}`,
+          page_number: c.page_number || c.pageNumber || 1,
+          pageNumber: c.pageNumber || c.page_number || 1,
+          section: c.section || c.sectionName || 'Document Section',
+          sectionName: c.sectionName || c.section || 'Document Section',
+        }));
       if (chunksToAdd.length > 0) {
         db.addChunks(chunksToAdd);
       }
@@ -57,12 +83,14 @@ export async function POST(req: Request) {
     // 2. Fetch history
     const history = db.getChatMessages(sessionId);
 
-    // 3. Generate Evidence-Grounded AI Response
+    // 3. Generate Evidence-Grounded AI Response with Strict Isolation
     const result = await researchChatEngine.generateResponse({
       sessionId,
       projectId,
+      userId: user?.id,
       scope,
       paperId,
+      searchAcrossLibrary,
       userMessage: content,
       history,
       clientPapers,

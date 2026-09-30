@@ -122,10 +122,22 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
   }, [projectId]);
 
   useEffect(() => {
+    if (initialPaperId) {
+      setScope('paper');
+      setSelectedPaperId(initialPaperId);
+    }
+  }, [initialPaperId]);
+
+  useEffect(() => {
     if (activeSessionId) {
+      const sess = sessions.find((s) => s.id === activeSessionId);
+      if (sess) {
+        if (sess.scope) setScope(sess.scope);
+        if (sess.paperId) setSelectedPaperId(sess.paperId);
+      }
       fetchMessages(activeSessionId);
     }
-  }, [activeSessionId]);
+  }, [activeSessionId, sessions]);
 
   // 3. Create New Session
   const handleNewSession = async () => {
@@ -289,9 +301,18 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
           if (storedChunks) {
             const parsed = JSON.parse(storedChunks);
             if (Array.isArray(parsed)) {
-              const relevantPaperIds = new Set(papers.map((p) => p.id));
-              if (selectedPaperId) relevantPaperIds.add(selectedPaperId);
-              clientChunks = parsed.filter((c: any) => relevantPaperIds.has(c.paperId));
+              if (effectiveScope === 'paper' && selectedPaperId) {
+                clientChunks = parsed.filter(
+                  (c: any) => c.paperId === selectedPaperId || c.paper_id === selectedPaperId
+                );
+              } else {
+                const relevantPaperIds = new Set(papers.map((p) => p.id));
+                clientChunks = parsed.filter(
+                  (c: any) =>
+                    relevantPaperIds.has(c.paperId) ||
+                    (c.paper_id && relevantPaperIds.has(c.paper_id))
+                );
+              }
             }
           }
         } catch (storageErr) {
@@ -308,6 +329,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
           content: prompt,
           scope: effectiveScope,
           paperId: effectiveScope === 'paper' ? selectedPaperId : undefined,
+          searchAcrossLibrary,
           clientPapers: papers,
           clientChunks,
         }),
@@ -627,24 +649,43 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                   </div>
                 )}
 
-                <span className="text-[10px] font-mono bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded">
-                  {searchAcrossLibrary || scope === 'project' ? 'Project Library' : 'Single Paper Scope'}
-                </span>
+                <div className="flex items-center space-x-1.5">
+                  <select
+                    value={scope}
+                    onChange={(e) => setScope(e.target.value as 'project' | 'paper')}
+                    className="text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 focus:outline-none"
+                  >
+                    <option value="project">📚 All Project Papers</option>
+                    <option value="paper">📄 Single Paper</option>
+                  </select>
+
+                  {scope === 'paper' && papers.length > 0 && (
+                    <select
+                      value={selectedPaperId}
+                      onChange={(e) => setSelectedPaperId(e.target.value)}
+                      className="text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 max-w-[200px] truncate focus:outline-none"
+                    >
+                      {papers.map((p) => (
+                        <option key={p.id} value={p.id} className="truncate">
+                          {p.title}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
 
               {/* Scope Switcher / Restrict to Paper & Actions */}
               <div className="flex items-center space-x-2 text-xs">
-                {scope === 'paper' && (
-                  <label className="flex items-center space-x-1.5 cursor-pointer text-[11px] text-zinc-600 dark:text-zinc-400 font-mono">
-                    <input
-                      type="checkbox"
-                      checked={searchAcrossLibrary}
-                      onChange={(e) => setSearchAcrossLibrary(e.target.checked)}
-                      className="rounded border-zinc-300 text-zinc-900 focus:ring-0"
-                    />
-                    <span>Search Across My Research Library</span>
-                  </label>
-                )}
+                <label className="flex items-center space-x-1.5 cursor-pointer text-[11px] text-zinc-600 dark:text-zinc-400 font-mono">
+                  <input
+                    type="checkbox"
+                    checked={searchAcrossLibrary}
+                    onChange={(e) => setSearchAcrossLibrary(e.target.checked)}
+                    className="rounded border-zinc-300 text-zinc-900 focus:ring-0"
+                  />
+                  <span>Search Across My Research Library</span>
+                </label>
 
                 <button
                   onClick={handleClearConversation}
@@ -714,14 +755,21 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                           : 'bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 space-y-3'
                       }`}
                     >
-                      {/* Distinguishing Tag on Assistant message (Requirement 6) */}
+                      {/* Distinguishing Tag on Assistant message (SOURCE-GROUNDED SYNTHESIS validation) */}
                       {!isUser && (
                         <div className="flex items-center space-x-2 border-b border-zinc-200/60 dark:border-zinc-800 pb-2">
-                          <span className="text-[10px] font-mono uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded font-semibold flex items-center space-x-1">
-                            <ShieldCheck className="w-3 h-3" />
-                            <span>Source-Grounded Synthesis</span>
-                          </span>
-                          {msg.interpretationNotes && (
+                          {hasSources ? (
+                            <span className="text-[10px] font-mono uppercase bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded font-semibold flex items-center space-x-1">
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>Source-Grounded Synthesis</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-mono uppercase bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded font-medium flex items-center space-x-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>Insufficient Evidence Grounding</span>
+                            </span>
+                          )}
+                          {msg.interpretationNotes && hasSources && (
                             <span className="text-[10px] font-mono text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-950 px-2 py-0.5 rounded">
                               AI Reasoning & Grounding
                             </span>

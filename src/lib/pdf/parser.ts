@@ -59,14 +59,216 @@ function decodeHexString(hexStr: string): string {
   try {
     const cleanHex = hexStr.replace(/\s+/g, '');
     const padded = cleanHex.length % 2 !== 0 ? cleanHex + '0' : cleanHex;
-    return Buffer.from(padded, 'hex').toString('latin1');
+    const buf = Buffer.from(padded, 'hex');
+
+    // Detect UTF-16BE (PDF text using 2 bytes per char, e.g. BOM 0xFEFF or Indic/Latin with zero high byte)
+    if (buf.length >= 2 && buf.length % 2 === 0) {
+      if (buf[0] === 0xfe && buf[1] === 0xff) {
+        const sliced = buf.subarray(2);
+        sliced.swap16();
+        return sliced.toString('utf16le');
+      }
+      let zeroHighBytes = 0;
+      for (let i = 0; i < buf.length; i += 2) {
+        if (buf[i] === 0x00 || buf[i] === 0x09) zeroHighBytes++;
+      }
+      if (zeroHighBytes >= Math.floor(buf.length / 4) && zeroHighBytes > 0) {
+        const copy = Buffer.from(buf);
+        copy.swap16();
+        return copy.toString('utf16le');
+      }
+    }
+    return buf.toString('latin1');
   } catch {
     return '';
   }
 }
 
 /**
- * Robust Native PDF Stream and Flate Decompressor.
+ * Accurately decodes a PDF TJ array operator, e.g.:
+ * [(This) -250 (research) -250 (uses) -250 (a) -250 (native) -250 (Chittagonian)] TJ
+ * Negative numbers <= -80 represent word-spacing in PDF glyph coordinates.
+ * Numbers between -79 and +50 represent intra-word kerning.
+ */
+function parseTjArray(arrayBody: string): string {
+  const tokenRegex = /\(((?:[^()\\]|\\.)*)\)|<([0-9a-fA-F\s]+)>|([+-]?(?:\d*\.\d+|\d+))/g;
+  let match: RegExpExecArray | null;
+  const parts: string[] = [];
+  let lastDisplacement = 0;
+
+  while ((match = tokenRegex.exec(arrayBody)) !== null) {
+    if (match[1] !== undefined) {
+      // Literal string (...)
+      const decoded = decodePdfString(match[1]);
+      if (decoded) {
+        if (lastDisplacement <= -80 && parts.length > 0 && !parts[parts.length - 1].endsWith(' ') && !decoded.startsWith(' ')) {
+          parts.push(' ');
+        }
+        parts.push(decoded);
+      }
+      lastDisplacement = 0;
+    } else if (match[2] !== undefined) {
+      // Hex string <...>
+      const decoded = decodeHexString(match[2]);
+      if (decoded) {
+        if (lastDisplacement <= -80 && parts.length > 0 && !parts[parts.length - 1].endsWith(' ') && !decoded.startsWith(' ')) {
+          parts.push(' ');
+        }
+        parts.push(decoded);
+      }
+      lastDisplacement = 0;
+    } else if (match[3] !== undefined) {
+      lastDisplacement = parseFloat(match[3]);
+    }
+  }
+
+  return parts.join('').trim();
+}
+
+interface PositionedFragment {
+  text: string;
+  x: number;
+  y: number;
+  fontSize: number;
+}
+
+const COMPOUND_PREFIXES = new Set([
+  'low', 'high', 'cross', 'state', 'zero', 'multi', 'pre', 'post', 'self',
+  'well', 'fine', 'end', 'task', 'domain', 'context', 'evidence', 'open',
+  'peer', 'state-of-the', 'large', 'few', 'single', 'full', 'semi'
+]);
+
+/**
+ * Joins wrapped lines into logical paragraphs.
+ * Accurately distinguishes line-wrap hyphens (re-\nsearch -> research) from
+ * legitimate compound hyphens (low-resource, state-of-the-art, cross-paper, evidence-grounded).
+ */
+export function joinParagraphLines(lines: string[]): string {
+  let para = '';
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    if (!para) {
+      para = line;
+      continue;
+    }
+
+    if (para.endsWith('-')) {
+      const match = para.match(/([a-zA-Z0-9-]+)-$/);
+      const nextMatch = line.match(/^([a-zA-Z0-9]+)(.*)/);
+      if (match && nextMatch) {
+        const prefix = match[1].toLowerCase();
+        const nextWord = nextMatch[1];
+        const rest = nextMatch[2];
+        if (COMPOUND_PREFIXES.has(prefix) || prefix.endsWith('-the') || ['non', 'sub', 'meta'].includes(prefix)) {
+          para = para + nextWord + rest; // preserves legitimate hyphen
+        } else {
+          // Wrapped word line-break hyphen: re- + search -> research
+          para = para.slice(0, -1) + nextWord + rest;
+        }
+        continue;
+      }
+    }
+
+    para += ' ' + line;
+  }
+  return para;
+}
+
+/**
+ * Groups positioned fragments into horizontal lines and sorts by reading order.
+ * Handles single-column and academic two-column formats.
+ */
+function reconstructPageText(fragments: PositionedFragment[]): string {
+  if (fragments.length === 0) return '';
+
+  // Check if page has academic 2-column layout (fragments clustered in left and right halves)
+  const leftCol = fragments.filter((f) => f.x >= 30 && f.x <= 285 && f.y >= 80 && f.y <= 650);
+  const rightCol = fragments.filter((f) => f.x >= 305 && f.x <= 580 && f.y >= 80 && f.y <= 650);
+  const isTwoCol = leftCol.length >= 2 && rightCol.length >= 2;
+
+  const groupFragmentsIntoLines = (frags: PositionedFragment[]): string[] => {
+    if (frags.length === 0) return [];
+    const sorted = [...frags].sort((a, b) => {
+      const yDiff = b.y - a.y;
+      if (Math.abs(yDiff) > 3.5) return yDiff;
+      return a.x - b.x;
+    });
+
+    const lines: string[] = [];
+    let currentLine: PositionedFragment[] = [];
+    let currentY = -9999;
+
+    for (const frag of sorted) {
+      if (Math.abs(frag.y - currentY) > 3.5) {
+        if (currentLine.length > 0) {
+          lines.push(currentLine.map((f) => f.text.trim()).filter(Boolean).join(' '));
+          currentLine = [];
+        }
+        currentY = frag.y;
+      }
+      currentLine.push(frag);
+    }
+    if (currentLine.length > 0) {
+      lines.push(currentLine.map((f) => f.text.trim()).filter(Boolean).join(' '));
+    }
+    return lines;
+  };
+
+  let pageLines: string[] = [];
+
+  if (isTwoCol) {
+    const colSplit = 295;
+    const maxLeftY = Math.max(...leftCol.map((f) => f.y));
+    const maxRightY = Math.max(...rightCol.map((f) => f.y));
+    const colTopY = Math.max(maxLeftY, maxRightY) + 2;
+
+    const topBanner = fragments.filter((f) => f.y > colTopY);
+    const leftFrags = fragments.filter((f) => f.y <= colTopY && f.x < colSplit);
+    const rightFrags = fragments.filter((f) => f.y <= colTopY && f.x >= colSplit);
+
+    pageLines = [
+      ...groupFragmentsIntoLines(topBanner),
+      ...groupFragmentsIntoLines(leftFrags),
+      ...groupFragmentsIntoLines(rightFrags),
+    ];
+  } else {
+    pageLines = groupFragmentsIntoLines(fragments);
+  }
+
+  // Convert raw lines into paragraphs
+  const paragraphs: string[] = [];
+  let currentParaLines: string[] = [];
+
+  for (const line of pageLines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (currentParaLines.length > 0) {
+        paragraphs.push(joinParagraphLines(currentParaLines));
+        currentParaLines = [];
+      }
+      continue;
+    }
+
+    // Check if line is a clear section heading or list item
+    const isHeadingOrList = /^(?:\d+[\.\)]|\*|\-|[IVXLCDM]+\.|\b(?:ABSTRACT|INTRODUCTION|RELATED WORK|METHODOLOGY|DATASET|EXPERIMENTS|RESULTS|LIMITATIONS|CONCLUSION|REFERENCES)\b)/i.test(trimmed);
+    if (isHeadingOrList && currentParaLines.length > 0) {
+      paragraphs.push(joinParagraphLines(currentParaLines));
+      currentParaLines = [];
+    }
+
+    currentParaLines.push(trimmed);
+  }
+
+  if (currentParaLines.length > 0) {
+    paragraphs.push(joinParagraphLines(currentParaLines));
+  }
+
+  return paragraphs.join('\n\n');
+}
+
+/**
+ * Robust Native PDF Stream and Flate Decompressor with Text Positioning.
  * Decompresses all compressed (FlateDecode) and raw text streams directly using Node zlib.
  * Does NOT require external workers, headless browsers, canvas, or DOMMatrix.
  */
@@ -113,44 +315,87 @@ function extractAllStreamsAndText(buffer: Buffer): { fullText: string; pageTexts
 
     if (decompressed) {
       const rawContent = decompressed.toString('latin1');
-      const streamWords: string[] = [];
+      const pageFragments: PositionedFragment[] = [];
 
-      // 1. Literal text: (text) Tj
-      const tjLiteralRegex = /\(((?:[^()\\]|\\.)*)\)\s*Tj/g;
-      let m: RegExpExecArray | null;
-      while ((m = tjLiteralRegex.exec(rawContent)) !== null) {
-        const decoded = decodePdfString(m[1]).trim();
-        if (decoded) streamWords.push(decoded);
-      }
+      let currentX = 0;
+      let currentY = 0;
+      let currentFontSize = 11;
+      let lineStartX = 0;
 
-      // 2. Hex text: <hex> Tj
-      const tjHexRegex = /<([0-9a-fA-F\s]+)>\s*Tj/g;
-      while ((m = tjHexRegex.exec(rawContent)) !== null) {
-        const decoded = decodeHexString(m[1]).trim();
-        if (decoded) streamWords.push(decoded);
-      }
+      // Tokenize PDF stream commands: BT, ET, Tf, Tm, Td, TD, T*, Tj, ', ", TJ
+      const cmdRegex = /(?:BT|ET|\/F\w+\s+([\d.]+)\s+Tf|([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+Tm|([-\d.]+)\s+([-\d.]+)\s+Td|([-\d.]+)\s+([-\d.]+)\s+TD|T\*|\(((?:[^()\\]|\\.)*)\)\s*Tj|<([0-9a-fA-F\s]+)>\s*Tj|\(((?:[^()\\]|\\.)*)\)\s*'|\[(.*?)\]\s*TJ)/g;
 
-      // 3. Array text: [(text) 20 <hex> -10 (more)] TJ
-      const tjArrayRegex = /\[(.*?)\]\s*TJ/g;
-      while ((m = tjArrayRegex.exec(rawContent)) !== null) {
-        const arrayBody = m[1];
-        const itemRegex = /\(((?:[^()\\]|\\.)*)\)|<([0-9a-fA-F\s]+)>/g;
-        let itemMatch: RegExpExecArray | null;
-        const lineParts: string[] = [];
-        while ((itemMatch = itemRegex.exec(arrayBody)) !== null) {
-          if (itemMatch[1] !== undefined) {
-            lineParts.push(decodePdfString(itemMatch[1]));
-          } else if (itemMatch[2] !== undefined) {
-            lineParts.push(decodeHexString(itemMatch[2]));
+      let opMatch: RegExpExecArray | null;
+      while ((opMatch = cmdRegex.exec(rawContent)) !== null) {
+        const fullOp = opMatch[0];
+
+        if (fullOp === 'BT') {
+          currentX = 0;
+          currentY = 0;
+          lineStartX = 0;
+        } else if (fullOp === 'ET') {
+          // End of text block
+        } else if (opMatch[1] !== undefined) {
+          // Tf: font size
+          currentFontSize = parseFloat(opMatch[1]) || 11;
+        } else if (opMatch[2] !== undefined) {
+          // Tm: text matrix a b c d e f
+          currentX = parseFloat(opMatch[6]) || currentX;
+          currentY = parseFloat(opMatch[7]) || currentY;
+          lineStartX = currentX;
+        } else if (opMatch[8] !== undefined) {
+          // Td: tx ty (moves relative to start of current line)
+          const tx = parseFloat(opMatch[8]) || 0;
+          const ty = parseFloat(opMatch[9]) || 0;
+          currentX = lineStartX + tx;
+          currentY += ty;
+          lineStartX = currentX;
+        } else if (opMatch[10] !== undefined) {
+          // TD: tx ty
+          const tx = parseFloat(opMatch[10]) || 0;
+          const ty = parseFloat(opMatch[11]) || 0;
+          currentX = lineStartX + tx;
+          currentY += ty;
+          lineStartX = currentX;
+        } else if (fullOp === 'T*') {
+          currentY -= currentFontSize * 1.2;
+          currentX = lineStartX;
+        } else if (opMatch[12] !== undefined) {
+          // (literal) Tj
+          const text = decodePdfString(opMatch[12]).trim();
+          if (text) {
+            pageFragments.push({ text, x: currentX, y: currentY, fontSize: currentFontSize });
+            currentX += text.length * currentFontSize * 0.5;
+          }
+        } else if (opMatch[13] !== undefined) {
+          // <hex> Tj
+          const text = decodeHexString(opMatch[13]).trim();
+          if (text) {
+            pageFragments.push({ text, x: currentX, y: currentY, fontSize: currentFontSize });
+            currentX += text.length * currentFontSize * 0.5;
+          }
+        } else if (opMatch[14] !== undefined) {
+          // ' (next line and show)
+          currentY -= currentFontSize * 1.2;
+          currentX = lineStartX;
+          const text = decodePdfString(opMatch[14]).trim();
+          if (text) {
+            pageFragments.push({ text, x: currentX, y: currentY, fontSize: currentFontSize });
+            currentX += text.length * currentFontSize * 0.5;
+          }
+        } else if (opMatch[15] !== undefined) {
+          // [...] TJ (array with displacement kerning)
+          const text = parseTjArray(opMatch[15]);
+          if (text) {
+            pageFragments.push({ text, x: currentX, y: currentY, fontSize: currentFontSize });
+            currentX += text.length * currentFontSize * 0.5;
           }
         }
-        const joined = lineParts.join('').trim();
-        if (joined) streamWords.push(joined);
       }
 
-      if (streamWords.length > 0) {
-        const streamText = streamWords.join(' ').replace(/\s+/g, ' ').trim();
-        if (streamText.length > 15) {
+      if (pageFragments.length > 0) {
+        const streamText = reconstructPageText(pageFragments);
+        if (streamText.length > 0) {
           textBlocks.push(streamText);
           pageTexts.push({ page: pageCounter++, text: streamText });
         }
@@ -176,7 +421,7 @@ export async function parsePdfBuffer(
   try {
     // 1. Primary Engine: Robust Native PDF Flate & Stream Decompressor (Zero external workers/DOMMatrix)
     const streamResult = extractAllStreamsAndText(buffer);
-    if (streamResult.fullText.trim().length > 30) {
+    if (streamResult.fullText.trim().length > 0) {
       fullText = streamResult.fullText;
       pageTexts = streamResult.pageTexts;
       totalPages = Math.max(1, pageTexts.length);
@@ -210,7 +455,7 @@ export async function parsePdfBuffer(
     }
 
     const cleanFullText = fullText.trim();
-    if (!cleanFullText || cleanFullText.length < 20) {
+    if (!cleanFullText || cleanFullText.length < 2) {
       warnings.push(
         'Warning: PDF document contains minimal or no extractable text. Document appears to be a scanned bitmap or restricted.'
       );
@@ -253,8 +498,11 @@ export async function parsePdfBuffer(
             if (currentChunkText.trim().length > 30) {
               chunks.push({
                 paperId,
+                paper_id: paperId,
                 pageNumber: page,
+                page_number: page,
                 sectionName: currentSection,
+                section: currentSection,
                 chunkIndex: chunkIndex++,
                 content: currentChunkText.trim(),
               });
@@ -270,8 +518,11 @@ export async function parsePdfBuffer(
           if (currentChunkText.trim().length > 30) {
             chunks.push({
               paperId,
+              paper_id: paperId,
               pageNumber: page,
+              page_number: page,
               sectionName: currentSection,
+              section: currentSection,
               chunkIndex: chunkIndex++,
               content: currentChunkText.trim(),
             });
@@ -286,8 +537,11 @@ export async function parsePdfBuffer(
         if (currentChunkText.length >= 700) {
           chunks.push({
             paperId,
+            paper_id: paperId,
             pageNumber: page,
+            page_number: page,
             sectionName: currentSection,
+            section: currentSection,
             chunkIndex: chunkIndex++,
             content: currentChunkText.trim(),
           });
@@ -299,8 +553,11 @@ export async function parsePdfBuffer(
       if (currentChunkText.trim().length > 20) {
         chunks.push({
           paperId,
+          paper_id: paperId,
           pageNumber: page,
+          page_number: page,
           sectionName: currentSection,
+          section: currentSection,
           chunkIndex: chunkIndex++,
           content: currentChunkText.trim(),
         });
@@ -311,8 +568,11 @@ export async function parsePdfBuffer(
     if (chunks.length === 0 && cleanFullText.length > 0) {
       chunks.push({
         paperId,
+        paper_id: paperId,
         pageNumber: 1,
+        page_number: 1,
         sectionName: 'Introduction',
+        section: 'Introduction',
         chunkIndex: 0,
         content: cleanFullText.substring(0, 1200),
       });

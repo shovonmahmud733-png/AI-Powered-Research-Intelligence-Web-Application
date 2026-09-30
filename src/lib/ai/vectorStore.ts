@@ -168,11 +168,13 @@ export class VectorStore {
     // Sort by descending score
     scored.sort((a, b) => b.score - a.score);
 
-    // If there were query tokens but no exact matches, check if query was asking for summary/overview
-    const isOverviewQuery = queryTokens.some((t) =>
-      ['about', 'summary', 'overview', 'explain', 'what', 'describe', 'work'].includes(t)
-    );
-    if (scored.length > 0 && scored[0].score === 0 && isOverviewQuery) {
+    // If there were query tokens but no matches, check if query was explicitly asking for a summary/overview of the paper itself
+    const overviewKeywords = new Set(['summary', 'summarize', 'overview', 'synopsis']);
+    const isGeneralSummaryQuery =
+      queryTokens.some((t) => overviewKeywords.has(t)) ||
+      (queryTokens.length <= 4 && queryTokens.includes('about') && (queryTokens.includes('paper') || queryTokens.includes('study')));
+
+    if (scored.length > 0 && scored[0].score === 0 && isGeneralSummaryQuery) {
       // Elevate the first chunks as baseline context
       return chunks.slice(0, topK).map((c, i) => ({
         chunk: c,

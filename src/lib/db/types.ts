@@ -59,11 +59,24 @@ export interface Paper {
 
 export interface DocumentChunk {
   id: string;
+  chunk_id?: string;
+  user_id?: string;
+  userId?: string;
+  project_id?: string;
+  projectId?: string;
+  paper_id?: string;
   paperId: string;
+  document_id?: string;
+  documentId?: string;
+  page_number?: number;
   pageNumber: number;
+  section?: string;
   sectionName: string;
   chunkIndex: number;
   content: string;
+  source_filename?: string;
+  sourceFilename?: string;
+  doi?: string;
   embedding?: number[];
 }
 

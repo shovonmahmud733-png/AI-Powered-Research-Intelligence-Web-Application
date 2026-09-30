@@ -261,14 +261,33 @@ class DatabaseService {
   // Chunks
   getChunksByPaper(paperId: string): DocumentChunk[] {
     this.load();
-    return this.data.chunks.filter((c) => c.paperId === paperId);
+    return this.data.chunks.filter((c) => c.paperId === paperId || c.paper_id === paperId);
   }
 
   getChunksByProject(projectId: string): DocumentChunk[] {
     this.load();
     const papers = this.getPapers(projectId);
     const paperIds = new Set(papers.map((p) => p.id));
-    return this.data.chunks.filter((c) => paperIds.has(c.paperId));
+    return this.data.chunks.filter(
+      (c) =>
+        paperIds.has(c.paperId) ||
+        (c.paper_id && paperIds.has(c.paper_id)) ||
+        c.projectId === projectId ||
+        c.project_id === projectId
+    );
+  }
+
+  getChunksByUser(userId: string): DocumentChunk[] {
+    this.load();
+    const userProjects = this.getProjects(userId);
+    const projectIds = new Set(userProjects.map((p) => p.id));
+    return this.data.chunks.filter(
+      (c) =>
+        c.userId === userId ||
+        c.user_id === userId ||
+        (c.projectId && projectIds.has(c.projectId)) ||
+        (c.project_id && projectIds.has(c.project_id))
+    );
   }
 
   addChunks(chunks: DocumentChunk[]): void {
