@@ -70,7 +70,7 @@ export class VectorStore {
     const chunkStemsList: string[][] = [];
 
     chunks.forEach((c) => {
-      const tokens = cleanTokens(c.content + ' ' + c.sectionName);
+      const tokens = cleanTokens(c.content + ' ' + (c.sectionName || c.section || ''));
       const stems = tokens.map(getStem);
       chunkTokensList.push(tokens);
       chunkStemsList.push(stems);
@@ -118,7 +118,7 @@ export class VectorStore {
       });
 
       // Bonus for section relevance (e.g. asking about "limitation" and section is "Limitations")
-      const sectionLower = chunk.sectionName.toLowerCase();
+      const sectionLower = (chunk.sectionName || chunk.section || '').toLowerCase();
       queryTokens.forEach((qTerm, qIdx) => {
         const qStem = queryStems[qIdx];
         if (

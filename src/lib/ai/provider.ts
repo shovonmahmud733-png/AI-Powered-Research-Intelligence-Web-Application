@@ -154,6 +154,39 @@ class OfflineAcademicEngine implements LLMProvider {
         synthesis = `Insufficient evidence in the selected paper regarding results and evaluations.`;
         evidenceList.length = 0;
       }
+    } else if (qLower.includes('preprocess') || qLower.includes('clean') || qLower.includes('tokeniz') || qLower.includes('normaliz')) {
+      const prepChunk = chunks.find((c) =>
+        /preprocess|token|clean|normaliz|feature/i.test(c.chunk.sectionName) ||
+        /preprocess|token|clean|normaliz|filter|corpus/i.test(c.chunk.content)
+      );
+      if (prepChunk) {
+        synthesis = `Based on the **${prepChunk.chunk.sectionName}** section (Page ${prepChunk.chunk.pageNumber}) of **${paperTitle}**:\n\n> "${prepChunk.chunk.content.substring(0, 320)}..."\n\nThe documented data preparation and preprocessing procedures applied by the authors are described above.`;
+      } else {
+        synthesis = `Insufficient evidence in the selected paper regarding preprocessing techniques.`;
+        evidenceList.length = 0;
+      }
+    } else if (qLower.includes('problem') || qLower.includes('objective') || qLower.includes('aim') || qLower.includes('goal') || qLower.includes('motivation')) {
+      const problemChunk = chunks.find((c) =>
+        /problem|objective|aim|goal|motivat|intro|abstract/i.test(c.chunk.sectionName) ||
+        /problem|objective|aim|goal|motivat|we investigate|we study|we propose|address/i.test(c.chunk.content)
+      ) || primaryChunk;
+      if (problemChunk) {
+        synthesis = `As documented in **${problemChunk.chunk.sectionName}** (Page ${problemChunk.chunk.pageNumber}) of **${paperTitle}**:\n\n> "${problemChunk.chunk.content.substring(0, 320)}..."\n\nThe authors formulate their core research inquiry and objectives as detailed above.`;
+      } else {
+        synthesis = `Insufficient evidence in the selected paper regarding the research problem.`;
+        evidenceList.length = 0;
+      }
+    } else if (qLower.includes('future') || qLower.includes('next step') || qLower.includes('extension')) {
+      const futureChunk = chunks.find((c) =>
+        /future|conclusion|next/i.test(c.chunk.sectionName) ||
+        /future work|future research|in the future|we plan to|next step|promising direction/i.test(c.chunk.content)
+      );
+      if (futureChunk) {
+        synthesis = `According to the **${futureChunk.chunk.sectionName}** section (Page ${futureChunk.chunk.pageNumber}) of **${paperTitle}**:\n\n> "${futureChunk.chunk.content.substring(0, 320)}..."\n\nThe authors outline prospective research directions and future extensions as documented above.`;
+      } else {
+        synthesis = `Insufficient evidence in the selected paper regarding future work recommendations.`;
+        evidenceList.length = 0;
+      }
     } else if (primaryChunk.score >= 0.25 || qLower.includes('summar') || qLower.includes('about') || qLower.includes('what') || qLower.includes('overview')) {
       synthesis = `Regarding your inquiry on *" ${req.prompt} "*:\n\nDirect evidence from **${primaryChunk.chunk.sectionName}** (Page ${primaryChunk.chunk.pageNumber}) of **${paperTitle}** states:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\nThis passage provides the primary grounding for the investigation within the retrieved paper content.`;
     } else {

@@ -110,12 +110,31 @@ export async function POST(req: Request) {
     };
     db.addChatMessage(assistantMessage);
 
-    // If session title is default and this is first user message, update session title
+    // 5. Persist thread state: scope, paperId, searchAcrossLibrary
+    // This ensures Single Paper mode persists across all messages in the thread
     const session = db.getChatSessionById(sessionId);
+    const sessionUpdates: Record<string, any> = {};
+
+    // Always persist the scope and paperId the user explicitly selected
+    if (scope) sessionUpdates.scope = scope;
+    if (scope === 'paper' && paperId) {
+      sessionUpdates.paperId = paperId;
+      // Find paper title for display
+      const allPapers = [...db.getPapers(projectId), ...(clientPapers || [])];
+      const targetPaper = allPapers.find((p: any) => p.id === paperId) || db.getPaperById(paperId);
+      if (targetPaper) sessionUpdates.paperTitle = targetPaper.title;
+    }
+    if (searchAcrossLibrary !== undefined) {
+      sessionUpdates.searchAcrossLibrary = searchAcrossLibrary;
+    }
+
+    // Auto-title: if session title is default and this is first user message
     if (session && (session.title === 'New Research Conversation' || !session.title)) {
-      db.updateChatSession(sessionId, {
-        title: content.substring(0, 36) + (content.length > 36 ? '...' : ''),
-      });
+      sessionUpdates.title = content.substring(0, 36) + (content.length > 36 ? '...' : '');
+    }
+
+    if (Object.keys(sessionUpdates).length > 0) {
+      db.updateChatSession(sessionId, sessionUpdates);
     }
 
     return NextResponse.json({

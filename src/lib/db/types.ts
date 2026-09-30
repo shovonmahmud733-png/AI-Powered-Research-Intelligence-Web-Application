@@ -248,13 +248,25 @@ export interface SystematicReviewItem {
 
 export interface ChatSourceItem {
   paperId?: string;
+  paper_id?: string;
   paperTitle?: string;
   page?: number;
+  page_number?: number;
   section?: string;
   snippet?: string;
   noteTitle?: string;
   sourceType: 'paper_chunk' | 'chunk' | 'evidence' | 'note' | 'gap' | 'memory' | 'contradiction';
   similarityScore?: number;
+  userId?: string;
+  user_id?: string;
+  projectId?: string;
+  project_id?: string;
+  documentId?: string;
+  document_id?: string;
+  chunkId?: string;
+  chunk_id?: string;
+  sourceFilename?: string;
+  source_filename?: string;
 }
 
 export interface ChatMessage {
@@ -277,6 +289,7 @@ export interface ChatSession {
   scope: 'project' | 'paper';
   paperId?: string;
   paperTitle?: string;
+  searchAcrossLibrary?: boolean;
   createdAt: string;
   updatedAt: string;
 }

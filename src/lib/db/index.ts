@@ -552,6 +552,8 @@ class DatabaseService {
       title: session.title,
       scope: session.scope || 'project',
       paperId: session.paperId,
+      paperTitle: session.paperTitle,
+      searchAcrossLibrary: session.searchAcrossLibrary ?? false,
       createdAt: session.createdAt || now,
       updatedAt: session.updatedAt || now,
     };

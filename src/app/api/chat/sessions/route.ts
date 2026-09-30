@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { projectId, title, scope = 'project', paperId, paperTitle } = body;
+    const { projectId, title, scope = 'project', paperId, paperTitle, searchAcrossLibrary = false } = body;
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
@@ -29,6 +29,7 @@ export async function POST(req: Request) {
       scope,
       paperId: paperId || undefined,
       paperTitle: paperTitle || undefined,
+      searchAcrossLibrary: searchAcrossLibrary || false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -43,12 +44,23 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
-    const { sessionId, title } = body;
-    if (!sessionId || !title) {
-      return NextResponse.json({ error: 'sessionId and title are required' }, { status: 400 });
+    const { sessionId, title, scope, paperId, paperTitle, searchAcrossLibrary } = body;
+    if (!sessionId) {
+      return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
     }
 
-    const updated = db.updateChatSession(sessionId, { title });
+    const updates: Partial<ChatSession> = {};
+    if (title !== undefined) updates.title = title;
+    if (scope !== undefined) updates.scope = scope;
+    if (paperId !== undefined) updates.paperId = paperId;
+    if (paperTitle !== undefined) updates.paperTitle = paperTitle;
+    if (searchAcrossLibrary !== undefined) updates.searchAcrossLibrary = searchAcrossLibrary;
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No valid update fields provided' }, { status: 400 });
+    }
+
+    const updated = db.updateChatSession(sessionId, updates);
     if (!updated) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }

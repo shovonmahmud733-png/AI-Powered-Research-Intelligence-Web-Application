@@ -76,10 +76,15 @@ export class ResearchChatEngine {
         }
       }
 
-      // Hard filter: ensure zero chunks from other papers leak in
-      candidateChunks = candidateChunks.filter(
-        (c) => c.paperId === paperId || c.paper_id === paperId
-      );
+      // Hard filter: ensure user_id, project_id, and paper_id boundaries are strictly enforced
+      candidateChunks = candidateChunks.filter((c) => {
+        const matchesPaper = c.paperId === paperId || c.paper_id === paperId;
+        const cProj = c.projectId || c.project_id;
+        const matchesProject = !cProj || cProj === projectId;
+        const cUser = c.userId || c.user_id;
+        const matchesUser = !userId || !cUser || cUser === userId || (project?.userId && cUser === project.userId);
+        return matchesPaper && matchesProject && matchesUser;
+      });
 
       // If paper has no chunks yet, construct virtual chunk strictly from this paper's metadata
       if (candidateChunks.length === 0 && singlePaper) {
@@ -276,16 +281,37 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
     const sources: ChatSourceItem[] = [];
 
     validatedChunks.forEach((sc) => {
-      const cPaperId = sc.chunk.paperId || sc.chunk.paper_id;
+      const c = sc.chunk;
+      const cPaperId = c.paperId || c.paper_id;
       const paper = papers.find((p) => p.id === cPaperId);
+      const cUserId = c.userId || c.user_id || userId || project?.userId;
+      const cProjectId = c.projectId || c.project_id || projectId;
+      const cDocId = c.documentId || c.document_id || `doc-${cPaperId}`;
+      const cChunkId = c.id || c.chunk_id;
+      const cFilename = c.sourceFilename || c.source_filename || paper?.pdfFileName || `${paper?.title || 'document'}.pdf`;
+      const pageNum = typeof c.pageNumber === 'number' ? c.pageNumber : c.page_number || 1;
+      const secName = c.sectionName || c.section || 'General';
+
       sources.push({
         paperId: cPaperId,
+        paper_id: cPaperId,
         paperTitle: paper ? paper.title : sc.chunk.sourceFilename || 'Research Publication',
-        page: sc.chunk.pageNumber,
-        section: sc.chunk.sectionName || sc.chunk.section,
+        page: pageNum,
+        page_number: pageNum,
+        section: secName,
         snippet: sc.highlightSnippets[0] || sc.chunk.content.substring(0, 200),
         sourceType: 'paper_chunk',
         similarityScore: Math.round(sc.score * 100),
+        userId: cUserId,
+        user_id: cUserId,
+        projectId: cProjectId,
+        project_id: cProjectId,
+        documentId: cDocId,
+        document_id: cDocId,
+        chunkId: cChunkId,
+        chunk_id: cChunkId,
+        sourceFilename: cFilename,
+        source_filename: cFilename,
       });
     });
 
@@ -293,29 +319,54 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
     if (isLimitationQuery) {
       projectMatrix.forEach((m) => {
         if (m.limitation && (!isSinglePaper || m.paperId === paperId)) {
+          const p = papers.find((paper) => paper.id === m.paperId);
           sources.push({
             paperId: m.paperId,
+            paper_id: m.paperId,
             paperTitle: m.paperTitle,
             page: 1,
+            page_number: 1,
             section: 'Limitations (Empirical Matrix)',
             snippet: m.limitation,
             sourceType: 'evidence',
             similarityScore: 94,
+            userId: project?.userId || userId,
+            user_id: project?.userId || userId,
+            projectId: projectId,
+            project_id: projectId,
+            documentId: `doc-${m.paperId}`,
+            document_id: `doc-${m.paperId}`,
+            chunkId: `matrix-lim-${m.id}`,
+            chunk_id: `matrix-lim-${m.id}`,
+            sourceFilename: p?.pdfFileName || `${m.paperTitle}.pdf`,
+            source_filename: p?.pdfFileName || `${m.paperTitle}.pdf`,
           });
         }
       });
       paperAnalyses.forEach((a: any) => {
         if (a && a.limitations && Array.isArray(a.limitations) && (!isSinglePaper || a.paperId === paperId)) {
           const p = papers.find((paper) => paper.id === a.paperId);
-          a.limitations.forEach((lim: string) => {
+          a.limitations.forEach((lim: string, idx: number) => {
             sources.push({
               paperId: a.paperId,
+              paper_id: a.paperId,
               paperTitle: p ? p.title : 'Uploaded Research Manuscript',
               page: 1,
+              page_number: 1,
               section: 'Limitations (Structured Extraction)',
               snippet: lim,
               sourceType: 'evidence',
               similarityScore: 94,
+              userId: project?.userId || userId,
+              user_id: project?.userId || userId,
+              projectId: projectId,
+              project_id: projectId,
+              documentId: `doc-${a.paperId}`,
+              document_id: `doc-${a.paperId}`,
+              chunkId: `analysis-lim-${a.paperId}-${idx}`,
+              chunk_id: `analysis-lim-${a.paperId}-${idx}`,
+              sourceFilename: p?.pdfFileName || `${p?.title || 'document'}.pdf`,
+              source_filename: p?.pdfFileName || `${p?.title || 'document'}.pdf`,
             });
           });
         }
@@ -323,24 +374,43 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
     }
 
     relevantEvidence.slice(0, 2).forEach((ev) => {
-      sources.push({
-        paperId: ev.paperId,
-        paperTitle: ev.paperTitle,
-        page: ev.page,
-        section: ev.section,
-        snippet: ev.snippet,
-        sourceType: 'evidence',
-        similarityScore: 92,
-      });
+      if (!isSinglePaper || ev.paperId === paperId) {
+        const p = papers.find((paper) => paper.id === ev.paperId);
+        sources.push({
+          paperId: ev.paperId,
+          paper_id: ev.paperId,
+          paperTitle: ev.paperTitle,
+          page: ev.page,
+          page_number: ev.page,
+          section: ev.section,
+          snippet: ev.snippet,
+          sourceType: 'evidence',
+          similarityScore: 92,
+          userId: project?.userId || userId,
+          user_id: project?.userId || userId,
+          projectId: projectId,
+          project_id: projectId,
+          documentId: `doc-${ev.paperId}`,
+          document_id: `doc-${ev.paperId}`,
+          chunkId: `evidence-${ev.id}`,
+          chunk_id: `evidence-${ev.id}`,
+          sourceFilename: p?.pdfFileName || `${ev.paperTitle}.pdf`,
+          source_filename: p?.pdfFileName || `${ev.paperTitle}.pdf`,
+        });
+      }
     });
 
-    relevantContradictions.slice(0, 1).forEach((c) => {
-      sources.push({
-        sourceType: 'contradiction',
-        snippet: `Documented Contradiction: ${c.topic} (${c.paperATitle} vs ${c.paperBTitle})`,
-        similarityScore: 90,
+    if (!isSinglePaper) {
+      relevantContradictions.slice(0, 1).forEach((c) => {
+        sources.push({
+          sourceType: 'contradiction',
+          snippet: `Documented Contradiction: ${c.topic} (${c.paperATitle} vs ${c.paperBTitle})`,
+          similarityScore: 90,
+          projectId: projectId,
+          project_id: projectId,
+        });
       });
-    });
+    }
 
     // 6. Evidence Grounding Check: Ensure answer only generated when valid evidence exists
     const hasSufficientEvidence =
@@ -386,13 +456,21 @@ CRITICAL OPERATIONAL RULES:
 3. DO NOT fabricate citations, page numbers, authors, DOIs, experimental results, or evidence.
 4. If sufficient evidence is missing in the paper to answer the inquiry, explicitly report:
    "Insufficient evidence in the selected paper."
-5. Never retrieve or cite unrelated documents, papers from other projects, or unverified documents.`;
+5. Never retrieve or cite unrelated documents, papers from other projects, or unverified documents.
+6. This is a multi-turn conversation. Use the conversation history to understand follow-up questions and resolve pronouns (e.g. "it", "they", "this", "that").`;
+
+    // Build conversation history context (last 6 turns max)
+    const recentHistory = (history || [])
+      .filter((h) => h.content && h.content.trim())
+      .slice(-6)
+      .map((h) => `${h.role === 'user' ? 'Researcher' : 'Research Copilot'}: ${h.content.substring(0, 400)}`)
+      .join('\n\n');
 
     const promptPayload = `Project Field: ${project?.researchField || 'Scientific Research'}
 Active Research Questions:
 ${project?.researchQuestions?.map((q) => `- [${q.status.toUpperCase()}] ${q.question}`).join('\n') || 'None recorded'}
 
-Retrieved Paper Chunks:
+${recentHistory ? `Conversation History:\n${recentHistory}\n\n---\n\n` : ''}Retrieved Paper Chunks:
 ${validatedChunks.map((sc) => `[Source: ${papers.find((p) => p.id === (sc.chunk.paperId || sc.chunk.paper_id))?.title || sc.chunk.sourceFilename || 'Paper'} | Page ${sc.chunk.pageNumber} | Section: ${sc.chunk.sectionName || sc.chunk.section}]\n${sc.chunk.content}`).join('\n\n---\n\n')}
 
 Structured Literature Matrix:

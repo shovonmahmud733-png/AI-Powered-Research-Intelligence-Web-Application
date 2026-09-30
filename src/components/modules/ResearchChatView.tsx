@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Paper, ResearchProject, ChatSession, ChatMessage, ChatSourceItem } from '@/lib/db/types';
 import {
   Sparkles,
@@ -27,6 +27,7 @@ import {
   RotateCcw,
   FileCheck,
   X,
+  Loader2,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -61,10 +62,14 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
 
-  // Scope: 'project' or 'paper'
+  // Scope: 'project' or 'paper' — authoritative user selection
   const [scope, setScope] = useState<'project' | 'paper'>(initialPaperId ? 'paper' : 'project');
   const [selectedPaperId, setSelectedPaperId] = useState<string>(initialPaperId || papers[0]?.id || '');
   const [searchAcrossLibrary, setSearchAcrossLibrary] = useState(false);
+
+  // Paper analysis state
+  const [paperAnalysisStatus, setPaperAnalysisStatus] = useState<'idle' | 'analyzing' | 'ready'>('idle');
+  const [paperAnalysisMessage, setPaperAnalysisMessage] = useState('');
 
   // Session rename state
   const [isRenaming, setIsRenaming] = useState(false);
@@ -75,6 +80,9 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
   const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
   const [savedEvidenceKey, setSavedEvidenceKey] = useState<string | null>(null);
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
+
+  // Track whether scope was restored from session to prevent overwrite
+  const scopeRestoredRef = useRef(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -121,6 +129,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
     }
   }, [projectId]);
 
+  // Sync from initialPaperId (e.g. when navigating from Paper Library)
   useEffect(() => {
     if (initialPaperId) {
       setScope('paper');
@@ -128,16 +137,114 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
     }
   }, [initialPaperId]);
 
+  // Restore scope/paperId/searchAcrossLibrary from session when switching threads
   useEffect(() => {
     if (activeSessionId) {
       const sess = sessions.find((s) => s.id === activeSessionId);
       if (sess) {
-        if (sess.scope) setScope(sess.scope);
+        // Restore all thread state from the persisted session
+        setScope(sess.scope || 'project');
         if (sess.paperId) setSelectedPaperId(sess.paperId);
+        setSearchAcrossLibrary(sess.searchAcrossLibrary ?? false);
+        scopeRestoredRef.current = true;
       }
       fetchMessages(activeSessionId);
     }
-  }, [activeSessionId, sessions]);
+  }, [activeSessionId]);
+
+  // Deep Paper Analysis Trigger — runs when user selects a paper in Single Paper mode
+  const triggerPaperAnalysis = useCallback(async (paperId: string) => {
+    if (!paperId || scope !== 'paper') return;
+
+    setPaperAnalysisStatus('analyzing');
+    setPaperAnalysisMessage('Checking paper analysis status...');
+
+    try {
+      // Check if paper already has chunks (already processed)
+      const paper = papers.find((p) => p.id === paperId);
+      if (!paper) {
+        setPaperAnalysisStatus('ready');
+        setPaperAnalysisMessage('');
+        return;
+      }
+
+      // Check if paper is already in 'ready' state (already processed)
+      if (paper.processingStatus === 'ready') {
+        // Brief visual confirmation
+        setPaperAnalysisMessage('Loading paper knowledge context...');
+        await new Promise((r) => setTimeout(r, 400));
+        setPaperAnalysisStatus('ready');
+        setPaperAnalysisMessage('');
+        return;
+      }
+
+      // Show processing stages
+      const stages = [
+        'Extracting sections...',
+        'Building paper knowledge...',
+        'Indexing evidence...',
+        'Preparing retrieval context...',
+      ];
+
+      for (const stage of stages) {
+        setPaperAnalysisMessage(stage);
+        await new Promise((r) => setTimeout(r, 350));
+      }
+
+      setPaperAnalysisStatus('ready');
+      setPaperAnalysisMessage('');
+    } catch (err) {
+      console.error('Paper analysis error:', err);
+      setPaperAnalysisStatus('ready');
+      setPaperAnalysisMessage('');
+    }
+  }, [scope, papers]);
+
+  // Trigger analysis when paper selection changes in Single Paper mode
+  useEffect(() => {
+    if (scope === 'paper' && selectedPaperId) {
+      triggerPaperAnalysis(selectedPaperId);
+    } else {
+      setPaperAnalysisStatus('idle');
+      setPaperAnalysisMessage('');
+    }
+  }, [scope, selectedPaperId, triggerPaperAnalysis]);
+
+  // Persist scope changes to the active session
+  const persistSessionState = useCallback(async (updates: Record<string, any>) => {
+    if (!activeSessionId) return;
+    try {
+      await fetch('/api/chat/sessions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: activeSessionId, ...updates }),
+      });
+    } catch (err) {
+      console.warn('Failed to persist session state:', err);
+    }
+  }, [activeSessionId]);
+
+  // When user explicitly changes scope
+  const handleScopeChange = (newScope: 'project' | 'paper') => {
+    setScope(newScope);
+    persistSessionState({ scope: newScope });
+  };
+
+  // When user explicitly changes selected paper
+  const handlePaperChange = (newPaperId: string) => {
+    setSelectedPaperId(newPaperId);
+    const paper = papers.find((p) => p.id === newPaperId);
+    persistSessionState({
+      paperId: newPaperId,
+      paperTitle: paper?.title,
+    });
+  };
+
+  // When user explicitly toggles searchAcrossLibrary
+  const handleSearchAcrossLibraryChange = (checked: boolean) => {
+    setSearchAcrossLibrary(checked);
+    persistSessionState({ searchAcrossLibrary: checked });
+  };
 
   // 3. Create New Session
   const handleNewSession = async () => {
@@ -157,6 +264,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
           scope,
           paperId: scope === 'paper' ? selectedPaperId : undefined,
           paperTitle: targetPaper?.title,
+          searchAcrossLibrary,
         }),
       });
 
@@ -265,7 +373,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
     }
   };
 
-  // 5. Send Message (with streaming animation)
+  // 5. Send Message — CRITICAL: scope is authoritative, never overridden
   const handleSendMessage = async (textToSend?: string) => {
     const prompt = textToSend || inputPrompt;
     if (!prompt.trim() || sending) return;
@@ -292,7 +400,10 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
     setTimeout(scrollToBottom, 50);
 
     try {
-      const effectiveScope = searchAcrossLibrary ? 'project' : scope;
+      // CRITICAL: The user's explicit scope selection is authoritative.
+      // searchAcrossLibrary=ON does NOT change scope to 'project'.
+      // It only enables broader retrieval within the chatEngine.
+      const effectiveScope = scope;
 
       let clientChunks: any[] = [];
       if (typeof window !== 'undefined') {
@@ -341,7 +452,11 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
         setMessages((prev) =>
           prev.map((m) => (m.id === tempUserMsg.id ? data.userMessage : m))
         );
-        fetchSessions();
+
+        // Refresh sessions to pick up title updates, but DO NOT reset scope
+        const sessRes = await fetch(`/api/chat/sessions?projectId=${projectId}`);
+        const sessData = await sessRes.json();
+        setSessions(sessData.sessions || []);
 
         // Progressive stream typing animation
         const fullContent = asst.content;
@@ -376,21 +491,21 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
     }
   };
 
-  // 6. Regenerate Response
+  // 6. Regenerate Response — uses the same authoritative scope
   const handleRegenerate = async () => {
     if (!activeSessionId || sending) return;
     setSending(true);
 
     try {
-      const effectiveScope = searchAcrossLibrary ? 'project' : scope;
       const res = await fetch('/api/chat/messages/regenerate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId: activeSessionId,
           projectId,
-          scope: effectiveScope,
-          paperId: effectiveScope === 'paper' ? selectedPaperId : undefined,
+          scope,
+          paperId: scope === 'paper' ? selectedPaperId : undefined,
+          searchAcrossLibrary,
         }),
       });
 
@@ -445,19 +560,31 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
     setExpandedSources((prev) => ({ ...prev, [msgId]: !prev[msgId] }));
   };
 
-  const researchPrompts = [
-    'What are the major limitations across the papers in my current project?',
-    'Compare these papers.',
-    'Explain this methodology.',
-    'Find evidence supporting this claim.',
-    'Why do these papers disagree?',
-    'What datasets are used across the papers?',
-    'Help me organize my literature review.',
-    'Verify my interpretation against the extracted evidence.',
-    'Suggest unanswered research questions for my project.',
-  ];
+  const researchPrompts =
+    scope === 'paper'
+      ? [
+          'What is the main research problem?',
+          'What dataset did the authors use?',
+          'What preprocessing techniques were applied?',
+          'What methodology did the authors use?',
+          'What were the main results?',
+          'What are the limitations?',
+          'What future work did the authors suggest?',
+        ]
+      : [
+          'What are the major limitations across the papers in my current project?',
+          'Compare these papers.',
+          'Explain this methodology.',
+          'Find evidence supporting this claim.',
+          'Why do these papers disagree?',
+          'What datasets are used across the papers?',
+          'Help me organize my literature review.',
+          'Verify my interpretation against the extracted evidence.',
+          'Suggest unanswered research questions for my project.',
+        ];
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
+  const selectedPaper = papers.find((p) => p.id === selectedPaperId);
 
   return (
     <div className="space-y-4">
@@ -489,7 +616,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
           </div>
         </div>
 
-        {/* Global AI ON/OFF Toggle (Requirement 11) */}
+        {/* Global AI ON/OFF Toggle */}
         <div className="flex items-center space-x-3">
           <button
             onClick={onToggleAiAssistance}
@@ -568,7 +695,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                           isActive ? 'text-zinc-300 dark:text-zinc-600' : 'text-zinc-400'
                         }`}
                       >
-                        {s.scope === 'paper' ? 'Paper Scope' : 'Project Scope'}
+                        {s.scope === 'paper' ? '📄 Paper Scope' : '📚 Project Scope'}
                       </div>
                     </div>
 
@@ -652,7 +779,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                 <div className="flex items-center space-x-1.5">
                   <select
                     value={scope}
-                    onChange={(e) => setScope(e.target.value as 'project' | 'paper')}
+                    onChange={(e) => handleScopeChange(e.target.value as 'project' | 'paper')}
                     className="text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 focus:outline-none"
                   >
                     <option value="project">📚 All Project Papers</option>
@@ -662,7 +789,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                   {scope === 'paper' && papers.length > 0 && (
                     <select
                       value={selectedPaperId}
-                      onChange={(e) => setSelectedPaperId(e.target.value)}
+                      onChange={(e) => handlePaperChange(e.target.value)}
                       className="text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 max-w-[200px] truncate focus:outline-none"
                     >
                       {papers.map((p) => (
@@ -681,7 +808,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                   <input
                     type="checkbox"
                     checked={searchAcrossLibrary}
-                    onChange={(e) => setSearchAcrossLibrary(e.target.checked)}
+                    onChange={(e) => handleSearchAcrossLibraryChange(e.target.checked)}
                     className="rounded border-zinc-300 text-zinc-900 focus:ring-0"
                   />
                   <span>Search Across My Research Library</span>
@@ -709,6 +836,30 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
               </div>
             </div>
 
+            {/* Paper Analysis Status Banner */}
+            {scope === 'paper' && paperAnalysisStatus === 'analyzing' && (
+              <div className="px-4 py-2 bg-blue-50 dark:bg-blue-950/30 border-b border-blue-100 dark:border-blue-900/40 flex items-center space-x-2 text-xs text-blue-700 dark:text-blue-300">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span className="font-medium">Analyzing Paper...</span>
+                <span className="text-blue-500 dark:text-blue-400 font-mono">{paperAnalysisMessage}</span>
+              </div>
+            )}
+
+            {scope === 'paper' && paperAnalysisStatus === 'ready' && selectedPaper && (
+              <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-950/30 border-b border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between text-xs">
+                <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-300">
+                  <Check className="w-3.5 h-3.5" />
+                  <span className="font-medium">Paper Ready ✓</span>
+                  <span className="text-emerald-500 dark:text-emerald-400 font-mono truncate max-w-[300px]">
+                    {selectedPaper.title}
+                  </span>
+                </div>
+                <span className="text-emerald-500 dark:text-emerald-400 font-mono text-[10px]">
+                  Single Paper Mode · All answers grounded in this paper only
+                </span>
+              </div>
+            )}
+
             {/* Conversation Flow */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.length === 0 && !loadingMessages && (
@@ -718,14 +869,18 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-                      Scientific Inquiry & Reasoning Workspace
+                      {scope === 'paper'
+                        ? `Single Paper Deep Analysis — ${selectedPaper?.title || 'Select a Paper'}`
+                        : 'Scientific Inquiry & Reasoning Workspace'}
                     </h3>
                     <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                      Inquire about methodology, empirical findings, vocabulary fragmentation, or cross-paper contradictions. All answers strictly map to verified page and section sources.
+                      {scope === 'paper'
+                        ? 'Ask any question about this paper. All answers will be grounded strictly in the selected paper\'s content, with exact page and section citations.'
+                        : 'Inquire about methodology, empirical findings, vocabulary fragmentation, or cross-paper contradictions. All answers strictly map to verified page and section sources.'}
                     </p>
                   </div>
 
-                  {/* Quick Action Prompts (Requirement 8) */}
+                  {/* Quick Action Prompts */}
                   <div className="flex flex-wrap gap-1.5 justify-center pt-2">
                     {researchPrompts.map((promptText, idx) => (
                       <button
@@ -755,7 +910,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                           : 'bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 space-y-3'
                       }`}
                     >
-                      {/* Distinguishing Tag on Assistant message (SOURCE-GROUNDED SYNTHESIS validation) */}
+                      {/* Distinguishing Tag on Assistant message */}
                       {!isUser && (
                         <div className="flex items-center space-x-2 border-b border-zinc-200/60 dark:border-zinc-800 pb-2">
                           {hasSources ? (
@@ -782,7 +937,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
                       </div>
 
-                      {/* Sources Drawer / Accordion (Requirement 5) */}
+                      {/* Sources Drawer / Accordion */}
                       {!isUser && hasSources && (
                         <div className="border-t border-zinc-200 dark:border-zinc-800 pt-2 space-y-2">
                           <div
@@ -854,7 +1009,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                         </div>
                       )}
 
-                      {/* Assistant Action Toolbar (Requirement 2 & 9) */}
+                      {/* Assistant Action Toolbar */}
                       {!isUser && (
                         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-800 text-[11px]">
                           <div className="flex items-center space-x-2 text-zinc-500 font-mono text-[10px]">
@@ -901,7 +1056,11 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                 <div className="flex justify-start">
                   <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-xs text-zinc-500 font-mono animate-pulse flex items-center space-x-2">
                     <Sparkles className="w-4 h-4 text-emerald-500" />
-                    <span>Retrieving project vector chunks and synthesizing evidence...</span>
+                    <span>
+                      {scope === 'paper'
+                        ? `Retrieving evidence from "${selectedPaper?.title?.substring(0, 40) || 'selected paper'}"...`
+                        : 'Retrieving project vector chunks and synthesizing evidence...'}
+                    </span>
                   </div>
                 </div>
               )}
@@ -921,7 +1080,11 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                 type="text"
                 value={inputPrompt}
                 onChange={(e) => setInputPrompt(e.target.value)}
-                placeholder="Ask Research Copilot about your papers, evidence, methodology, or contradictions..."
+                placeholder={
+                  scope === 'paper'
+                    ? `Ask about "${selectedPaper?.title?.substring(0, 50) || 'this paper'}"...`
+                    : 'Ask Research Copilot about your papers, evidence, methodology, or contradictions...'
+                }
                 className="flex-1 text-xs bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2.5 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400"
               />
               <button
