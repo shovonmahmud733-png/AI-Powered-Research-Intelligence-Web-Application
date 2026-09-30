@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import zlib from 'zlib';
-import { parsePdfBuffer, joinParagraphLines } from '../src/lib/pdf/parser';
+import { parsePdfBuffer, joinParagraphLines, normalizeExtractedText } from '../src/lib/pdf/parser';
 
 describe('PDF Word Spacing & Layout Extraction Tests', () => {
   function createPdfWithContent(streamContent: string): Buffer {
@@ -311,5 +311,39 @@ ET
     const text = result.chunks.map((c) => c.content).join(' ');
 
     expect(text).toContain('চাটগাঁইয়া');
+  });
+
+  it('15. Glued run-on words: normalizeExtractedText restores word boundaries accurately', () => {
+    const glued = 'ThisresearchusesanativeChittagoniandialectresource';
+    const restored = normalizeExtractedText(glued);
+    expect(restored).toBe('This research uses a native Chittagonian dialect resource');
+
+    const gluedSentence = 'As reported, ThisresearchusesanativeChittagoniandialectresource which is collected.';
+    expect(normalizeExtractedText(gluedSentence)).toContain('This research uses a native Chittagonian dialect resource');
+  });
+
+  it('16. Multi-line TJ array: correctly parses and normalizes word spacing across newlines', async () => {
+    const stream = `
+BT
+/F1 12 Tf
+50 700 Td
+[
+(This) -250
+(research) -250
+(uses) -250
+(a) -250
+(native) -250
+(Chittagonian) -250
+(dialect) -250
+(resource.)
+] TJ
+ET
+`;
+    const pdf = createPdfWithContent(stream);
+    const result = await parsePdfBuffer(pdf, 'test-multiline-tj');
+    const text = result.chunks.map((c) => c.content).join(' ');
+
+    expect(text).toContain('This research uses a native Chittagonian dialect resource.');
+    expect(text).not.toContain('ThisresearchusesanativeChittagoniandialectresource');
   });
 });

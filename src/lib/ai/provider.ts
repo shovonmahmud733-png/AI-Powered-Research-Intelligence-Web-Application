@@ -1,4 +1,5 @@
 import { ScoredChunk } from './vectorStore';
+import { normalizeExtractedText } from '../pdf/parser';
 
 export type TaskCategory =
   | 'summarization'
@@ -195,8 +196,8 @@ class OfflineAcademicEngine implements LLMProvider {
     }
 
     return {
-      answer: synthesis,
-      evidence: evidenceList,
+      answer: normalizeExtractedText(synthesis),
+      evidence: evidenceList.map((e) => ({ ...e, snippet: normalizeExtractedText(e.snippet) })),
       modelUsed: 'offline-academic-reasoner-v1',
       provider: 'Local Academic Reasoning Engine',
     };

@@ -515,4 +515,133 @@ describe('Single Paper Deep Analysis Mode Tests', () => {
     expect(res.sources.every((s) => s.paperId === paperA.id)).toBe(true);
     expect(res.content).toMatch(/5,200|sentences|cht-dialect-5k/i);
   });
+
+  // FINAL VALIDATION SUITE: 3-question sequence with explicit chunk logging and word spacing verification
+  it('FINAL VALIDATION: "what are the limitations??", "What dataset did the authors use?", "What methodology did the authors use?"', async () => {
+    // 1. "what are the limitations??"
+    console.log('\n--- FINAL VALIDATION 1: "what are the limitations??" ---');
+    console.log('Selected paper_id:', paperA.id);
+
+    const res1 = await researchChatEngine.generateResponse({
+      projectId,
+      userId,
+      scope: 'paper',
+      paperId: paperA.id,
+      searchAcrossLibrary: false,
+      userMessage: 'what are the limitations??',
+      clientPapers: [paperA, paperB],
+      clientChunks: [...chunksPaperA, ...chunksPaperB],
+    });
+
+    console.log('Retrieved Chunks for "what are the limitations??":');
+    res1.sources.forEach((s, idx) => {
+      console.log(
+        `  ${idx + 1}. paper_id=${s.paperId} document_id=${s.documentId} page=${s.page} section="${s.section}" filename=${s.sourceFilename}`
+      );
+    });
+
+    expect(res1.sources.length).toBeGreaterThan(0);
+    // Every retrieved chunk MUST belong to paperA.id
+    res1.sources.forEach((s) => {
+      expect(s.paperId).toBe(paperA.id);
+      expect(s.documentId).toBe(`doc-${paperA.id}`);
+      expect(s.sourceFilename).toBe(paperA.pdfFileName);
+      expect(s.page).toBeDefined();
+      expect(s.section).toBeDefined();
+    });
+    // Zero chunks from Paper B
+    expect(res1.sources.some((s) => s.paperId === paperB.id)).toBe(false);
+
+    // 2. "What dataset did the authors use?"
+    console.log('\n--- FINAL VALIDATION 2: "What dataset did the authors use?" ---');
+    console.log('Selected paper_id:', paperA.id);
+
+    const res2 = await researchChatEngine.generateResponse({
+      projectId,
+      userId,
+      scope: 'paper',
+      paperId: paperA.id,
+      searchAcrossLibrary: false,
+      userMessage: 'What dataset did the authors use?',
+      clientPapers: [paperA, paperB],
+      clientChunks: [...chunksPaperA, ...chunksPaperB],
+    });
+
+    console.log('Retrieved Chunks for "What dataset did the authors use?":');
+    res2.sources.forEach((s, idx) => {
+      console.log(
+        `  ${idx + 1}. paper_id=${s.paperId} document_id=${s.documentId} page=${s.page} section="${s.section}" filename=${s.sourceFilename}`
+      );
+    });
+
+    expect(res2.sources.length).toBeGreaterThan(0);
+    res2.sources.forEach((s) => {
+      expect(s.paperId).toBe(paperA.id);
+      expect(s.documentId).toBe(`doc-${paperA.id}`);
+      expect(s.sourceFilename).toBe(paperA.pdfFileName);
+    });
+    expect(res2.sources.some((s) => s.paperId === paperB.id)).toBe(false);
+
+    // 3. "What methodology did the authors use?"
+    console.log('\n--- FINAL VALIDATION 3: "What methodology did the authors use?" ---');
+    console.log('Selected paper_id:', paperA.id);
+
+    const res3 = await researchChatEngine.generateResponse({
+      projectId,
+      userId,
+      scope: 'paper',
+      paperId: paperA.id,
+      searchAcrossLibrary: false,
+      userMessage: 'What methodology did the authors use?',
+      clientPapers: [paperA, paperB],
+      clientChunks: [...chunksPaperA, ...chunksPaperB],
+    });
+
+    console.log('Retrieved Chunks for "What methodology did the authors use?":');
+    res3.sources.forEach((s, idx) => {
+      console.log(
+        `  ${idx + 1}. paper_id=${s.paperId} document_id=${s.documentId} page=${s.page} section="${s.section}" filename=${s.sourceFilename}`
+      );
+    });
+
+    expect(res3.sources.length).toBeGreaterThan(0);
+    res3.sources.forEach((s) => {
+      expect(s.paperId).toBe(paperA.id);
+      expect(s.documentId).toBe(`doc-${paperA.id}`);
+      expect(s.sourceFilename).toBe(paperA.pdfFileName);
+    });
+    expect(res3.sources.some((s) => s.paperId === paperB.id)).toBe(false);
+  });
+
+  // Word spacing verification: glued run-on text is normalized across retrieval and evidence
+  it('Word Spacing Verification: glued text is normalized and readable across chunks and evidence', async () => {
+    const gluedChunk: DocumentChunk = {
+      id: 'chunk_glued_01',
+      userId: userId,
+      projectId: projectId,
+      paperId: paperA.id,
+      documentId: `doc-${paperA.id}`,
+      pageNumber: 2,
+      sectionName: 'Resource Description',
+      chunkIndex: 10,
+      content: 'ThisresearchusesanativeChittagoniandialectresource which is collected for sentiment analysis.',
+      sourceFilename: 'paper-a.pdf',
+    };
+
+    const res = await researchChatEngine.generateResponse({
+      projectId,
+      userId,
+      scope: 'paper',
+      paperId: paperA.id,
+      searchAcrossLibrary: false,
+      userMessage: 'Tell me about the native Chittagonian dialect resource',
+      clientPapers: [paperA],
+      clientChunks: [gluedChunk],
+    });
+
+    const resourceSource = res.sources.find((s) => s.section === 'Resource Description');
+    expect(resourceSource).toBeDefined();
+    expect(resourceSource!.snippet).not.toContain('ThisresearchusesanativeChittagoniandialectresource');
+    expect(resourceSource!.snippet).toContain('This research uses a native Chittagonian dialect resource');
+  });
 });

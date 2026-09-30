@@ -2,6 +2,7 @@ import { db } from '../db';
 import { vectorStore, ScoredChunk } from './vectorStore';
 import { modelRouter } from './provider';
 import { ChatMessage, ChatSourceItem, Paper, DocumentChunk } from '../db/types';
+import { normalizeExtractedText } from '../pdf/parser';
 
 export interface ChatEngineOptions {
   sessionId?: string;
@@ -211,6 +212,7 @@ export class ResearchChatEngine {
         continue;
       }
       sc.chunk.sectionName = secName;
+      sc.chunk.content = normalizeExtractedText(sc.chunk.content);
 
       validatedChunks.push(sc);
     }
@@ -299,7 +301,7 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
         page: pageNum,
         page_number: pageNum,
         section: secName,
-        snippet: sc.highlightSnippets[0] || sc.chunk.content.substring(0, 200),
+        snippet: normalizeExtractedText(sc.highlightSnippets[0] || sc.chunk.content.substring(0, 200)),
         sourceType: 'paper_chunk',
         similarityScore: Math.round(sc.score * 100),
         userId: cUserId,
@@ -327,7 +329,7 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
             page: 1,
             page_number: 1,
             section: 'Limitations (Empirical Matrix)',
-            snippet: m.limitation,
+            snippet: normalizeExtractedText(m.limitation),
             sourceType: 'evidence',
             similarityScore: 94,
             userId: project?.userId || userId,
@@ -354,7 +356,7 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
               page: 1,
               page_number: 1,
               section: 'Limitations (Structured Extraction)',
-              snippet: lim,
+              snippet: normalizeExtractedText(lim),
               sourceType: 'evidence',
               similarityScore: 94,
               userId: project?.userId || userId,
@@ -383,7 +385,7 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
           page: ev.page,
           page_number: ev.page,
           section: ev.section,
-          snippet: ev.snippet,
+          snippet: normalizeExtractedText(ev.snippet),
           sourceType: 'evidence',
           similarityScore: 92,
           userId: project?.userId || userId,

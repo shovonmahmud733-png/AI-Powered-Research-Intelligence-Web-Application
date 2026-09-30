@@ -101,7 +101,7 @@ function parseTjArray(arrayBody: string): string {
       // Literal string (...)
       const decoded = decodePdfString(match[1]);
       if (decoded) {
-        if (lastDisplacement <= -80 && parts.length > 0 && !parts[parts.length - 1].endsWith(' ') && !decoded.startsWith(' ')) {
+        if ((lastDisplacement <= -40 || lastDisplacement >= 120) && parts.length > 0 && !parts[parts.length - 1].endsWith(' ') && !decoded.startsWith(' ')) {
           parts.push(' ');
         }
         parts.push(decoded);
@@ -111,7 +111,7 @@ function parseTjArray(arrayBody: string): string {
       // Hex string <...>
       const decoded = decodeHexString(match[2]);
       if (decoded) {
-        if (lastDisplacement <= -80 && parts.length > 0 && !parts[parts.length - 1].endsWith(' ') && !decoded.startsWith(' ')) {
+        if ((lastDisplacement <= -40 || lastDisplacement >= 120) && parts.length > 0 && !parts[parts.length - 1].endsWith(' ') && !decoded.startsWith(' ')) {
           parts.push(' ');
         }
         parts.push(decoded);
@@ -123,6 +123,104 @@ function parseTjArray(arrayBody: string): string {
   }
 
   return parts.join('').trim();
+}
+
+const COMMON_DICTIONARY = new Set([
+  'a', 'about', 'above', 'across', 'accuracy', 'acoustic', 'acoustics', 'address', 'after', 'against', 'all',
+  'almost', 'along', 'already', 'also', 'although', 'always', 'am', 'among', 'an', 'analysis', 'and', 'annotated',
+  'annotation', 'annotations', 'annotator', 'annotators', 'another', 'any', 'applied', 'approach', 'approaches',
+  'architectures', 'architecture', 'are', 'around', 'as', 'at', 'authors', 'based', 'baseline', 'baselines',
+  'be', 'because', 'been', 'before', 'being', 'benchmark', 'benchmarks', 'bengali', 'between', 'both', 'but',
+  'by', 'called', 'can', 'cannot', 'case', 'cases', 'chatgaiya', 'chittagonian', 'chittagong', 'clean',
+  'collected', 'collection', 'comparative', 'compare', 'compared', 'corpus', 'critical', 'current', 'currently',
+  'data', 'dataset', 'datasets', 'demonstrate', 'demonstrates', 'dependency', 'development', 'dialect',
+  'dialectal', 'dialects', 'dictionaries', 'dictionary', 'direct', 'distinct', 'do', 'does', 'due', 'during',
+  'each', 'early', 'empirical', 'empirically', 'encoders', 'encoder', 'error', 'errors', 'evaluating',
+  'evaluation', 'evaluations', 'even', 'every', 'field', 'first', 'following', 'for', 'formant', 'formants',
+  'formulate', 'formulation', 'found', 'four', 'from', 'further', 'future', 'general', 'generalizability',
+  'geographic', 'given', 'had', 'has', 'have', 'having', 'he', 'her', 'high', 'higher', 'his', 'how',
+  'however', 'i', 'if', 'in', 'including', 'indic', 'indo-aryan', 'interviews', 'into', 'investigate',
+  'investigating', 'investigates', 'is', 'it', 'its', 'item', 'items', 'just', 'language', 'languages',
+  'large', 'larger', 'less', 'limitation', 'limitations', 'limited', 'linguists', 'linguistic', 'low',
+  'low-resource', 'macro-f1', 'main', 'major', 'manually', 'many', 'may', 'mbert', 'method', 'methodology',
+  'methods', 'might', 'microphone', 'microphones', 'model', 'models', 'more', 'most', 'much', 'multilingual',
+  'must', 'native', 'natural', 'neither', 'neural', 'next', 'nlp', 'no', 'noise', 'non-standard', 'normalization',
+  'not', 'note', 'notes', 'now', 'number', 'numbers', 'obtained', 'of', 'off', 'often', 'on', 'one', 'only',
+  'or', 'order', 'orthography', 'other', 'others', 'our', 'out', 'outperforming', 'over', 'own', 'paper',
+  'papers', 'performance', 'phoneme', 'phonemes', 'phonetic', 'phonetics', 'points', 'possible', 'pre-aligned',
+  'preprocessing', 'pretraining', 'primary', 'problem', 'problems', 'processing', 'propose', 'proposed',
+  'proposes', 'public', 'rate', 'rates', 'raw', 'receptive', 'record', 'recorded', 'recording', 'recordings',
+  'regional', 'regularization', 'regularizer', 'related', 'report', 'reported', 'reports', 'research',
+  'researcher', 'resource', 'resources', 'restricts', 'restricted', 'result', 'results', 'sample', 'sampled',
+  'samples', 'scale', 'second', 'section', 'sections', 'selected', 'self-supervised', 'sentence', 'sentences',
+  'sentiment', 'set', 'sets', 'setup', 'several', 'should', 'show', 'shows', 'shown', 'significant',
+  'similarity', 'single', 'small', 'smaller', 'so', 'social', 'some', 'sound', 'source', 'sources',
+  'southeastern', 'speakers', 'speaker', 'speech', 'standard', 'standardized', 'state', 'statistical',
+  'still', 'structure', 'structured', 'studio', 'studio-only', 'study', 'studies', 'subword', 'subwords',
+  'such', 'suggest', 'suggests', 'table', 'tables', 'targeted', 'target', 'techniques', 'technique', 'than',
+  'that', 'the', 'their', 'them', 'then', 'there', 'these', 'they', 'this', 'three', 'through', 'to',
+  'tokenization', 'tokens', 'token', 'towards', 'trained', 'training', 'transfer', 'transformer', 'transformers',
+  'transliteration', 'two', 'under', 'unique', 'unit', 'units', 'until', 'up', 'upon', 'us', 'use', 'used',
+  'users', 'user', 'uses', 'using', 'utterances', 'utterance', 'validation', 'vanilla', 'variations',
+  'variation', 'varieties', 'variety', 'various', 'very', 'vocalic', 'vocabulary', 'was', 'we', 'well',
+  'were', 'what', 'when', 'where', 'which', 'while', 'who', 'will', 'with', 'within', 'without', 'word',
+  'words', 'work', 'works', 'working', 'would', 'xlm-r', 'xlm-roberta', 'year', 'years', 'yield', 'zero-shot'
+]);
+
+export function segmentGluedWord(token: string): string {
+  if (token.length <= 15 || !/^[a-zA-Z]+$/.test(token)) return token;
+
+  const n = token.length;
+  const lower = token.toLowerCase();
+
+  const dp = new Array(n + 1).fill(-Infinity);
+  const parent = new Array(n + 1).fill(-1);
+  dp[0] = 0;
+
+  for (let i = 0; i < n; i++) {
+    if (dp[i] === -Infinity) continue;
+    for (let len = 1; len <= Math.min(25, n - i); len++) {
+      const sub = lower.slice(i, i + len);
+      if (COMMON_DICTIONARY.has(sub)) {
+        const score = dp[i] + (len * len);
+        if (score > dp[i + len]) {
+          dp[i + len] = score;
+          parent[i + len] = i;
+        }
+      }
+    }
+  }
+
+  if (dp[n] > 0) {
+    const result: string[] = [];
+    let curr = n;
+    while (curr > 0) {
+      const prev = parent[curr];
+      result.unshift(token.slice(prev, curr));
+      curr = prev;
+    }
+    return result.join(' ');
+  }
+
+  return token;
+}
+
+export function normalizeExtractedText(text: string): string {
+  if (!text) return '';
+  return text
+    .split(/\s+/)
+    .map((token) => {
+      const match = token.match(/^([(\[{'\"“‘]*)([a-zA-Z0-9_-]+)([)\]}'\"”’.,;:!?]*)$/);
+      if (match) {
+        const prefix = match[1];
+        const word = match[2];
+        const suffix = match[3];
+        const segmented = segmentGluedWord(word);
+        return prefix + segmented + suffix;
+      }
+      return token;
+    })
+    .join(' ');
 }
 
 interface PositionedFragment {
@@ -323,7 +421,7 @@ function extractAllStreamsAndText(buffer: Buffer): { fullText: string; pageTexts
       let lineStartX = 0;
 
       // Tokenize PDF stream commands: BT, ET, Tf, Tm, Td, TD, T*, Tj, ', ", TJ
-      const cmdRegex = /(?:BT|ET|\/F\w+\s+([\d.]+)\s+Tf|([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+Tm|([-\d.]+)\s+([-\d.]+)\s+Td|([-\d.]+)\s+([-\d.]+)\s+TD|T\*|\(((?:[^()\\]|\\.)*)\)\s*Tj|<([0-9a-fA-F\s]+)>\s*Tj|\(((?:[^()\\]|\\.)*)\)\s*'|\[(.*?)\]\s*TJ)/g;
+      const cmdRegex = /(?:BT|ET|\/F\w+\s+([\d.]+)\s+Tf|([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+Tm|([-\d.]+)\s+([-\d.]+)\s+Td|([-\d.]+)\s+([-\d.]+)\s+TD|T\*|\(((?:[^()\\]|\\.)*)\)\s*Tj|<([0-9a-fA-F\s]+)>\s*Tj|\(((?:[^()\\]|\\.)*)\)\s*'|\[([\s\S]*?)\]\s*TJ)/g;
 
       let opMatch: RegExpExecArray | null;
       while ((opMatch = cmdRegex.exec(rawContent)) !== null) {
@@ -504,7 +602,7 @@ export async function parsePdfBuffer(
                 sectionName: currentSection,
                 section: currentSection,
                 chunkIndex: chunkIndex++,
-                content: currentChunkText.trim(),
+                content: normalizeExtractedText(currentChunkText.trim()),
               });
               currentChunkText = '';
             }
@@ -524,7 +622,7 @@ export async function parsePdfBuffer(
               sectionName: currentSection,
               section: currentSection,
               chunkIndex: chunkIndex++,
-              content: currentChunkText.trim(),
+              content: normalizeExtractedText(currentChunkText.trim()),
             });
             currentChunkText = '';
           }
@@ -543,7 +641,7 @@ export async function parsePdfBuffer(
             sectionName: currentSection,
             section: currentSection,
             chunkIndex: chunkIndex++,
-            content: currentChunkText.trim(),
+            content: normalizeExtractedText(currentChunkText.trim()),
           });
           currentChunkText = '';
         }
@@ -559,7 +657,7 @@ export async function parsePdfBuffer(
           sectionName: currentSection,
           section: currentSection,
           chunkIndex: chunkIndex++,
-          content: currentChunkText.trim(),
+          content: normalizeExtractedText(currentChunkText.trim()),
         });
       }
     }
@@ -574,7 +672,7 @@ export async function parsePdfBuffer(
         sectionName: 'Introduction',
         section: 'Introduction',
         chunkIndex: 0,
-        content: cleanFullText.substring(0, 1200),
+        content: normalizeExtractedText(cleanFullText.substring(0, 1200)),
       });
     }
 

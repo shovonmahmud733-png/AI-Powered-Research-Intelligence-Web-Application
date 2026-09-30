@@ -18,6 +18,7 @@ import {
   ChatSession,
   ChatMessage,
 } from './types';
+import { normalizeExtractedText } from '../pdf/parser';
 import {
   initialUsers,
   initialProjects,
@@ -261,38 +262,48 @@ class DatabaseService {
   // Chunks
   getChunksByPaper(paperId: string): DocumentChunk[] {
     this.load();
-    return this.data.chunks.filter((c) => c.paperId === paperId || c.paper_id === paperId);
+    return this.data.chunks
+      .filter((c) => c.paperId === paperId || c.paper_id === paperId)
+      .map((c) => ({ ...c, content: normalizeExtractedText(c.content) }));
   }
 
   getChunksByProject(projectId: string): DocumentChunk[] {
     this.load();
     const papers = this.getPapers(projectId);
     const paperIds = new Set(papers.map((p) => p.id));
-    return this.data.chunks.filter(
-      (c) =>
-        paperIds.has(c.paperId) ||
-        (c.paper_id && paperIds.has(c.paper_id)) ||
-        c.projectId === projectId ||
-        c.project_id === projectId
-    );
+    return this.data.chunks
+      .filter(
+        (c) =>
+          paperIds.has(c.paperId) ||
+          (c.paper_id && paperIds.has(c.paper_id)) ||
+          c.projectId === projectId ||
+          c.project_id === projectId
+      )
+      .map((c) => ({ ...c, content: normalizeExtractedText(c.content) }));
   }
 
   getChunksByUser(userId: string): DocumentChunk[] {
     this.load();
     const userProjects = this.getProjects(userId);
     const projectIds = new Set(userProjects.map((p) => p.id));
-    return this.data.chunks.filter(
-      (c) =>
-        c.userId === userId ||
-        c.user_id === userId ||
-        (c.projectId && projectIds.has(c.projectId)) ||
-        (c.project_id && projectIds.has(c.project_id))
-    );
+    return this.data.chunks
+      .filter(
+        (c) =>
+          c.userId === userId ||
+          c.user_id === userId ||
+          (c.projectId && projectIds.has(c.projectId)) ||
+          (c.project_id && projectIds.has(c.project_id))
+      )
+      .map((c) => ({ ...c, content: normalizeExtractedText(c.content) }));
   }
 
   addChunks(chunks: DocumentChunk[]): void {
     this.load();
-    this.data.chunks.push(...chunks);
+    const normalizedChunks = chunks.map((c) => ({
+      ...c,
+      content: normalizeExtractedText(c.content),
+    }));
+    this.data.chunks.push(...normalizedChunks);
     this.save();
   }
 

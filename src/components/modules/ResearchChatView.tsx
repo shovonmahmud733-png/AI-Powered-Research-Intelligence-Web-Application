@@ -717,7 +717,13 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
             <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 text-[10px] text-zinc-500 font-mono space-y-0.5">
               <div>Grounding Context:</div>
               <div className="text-zinc-400 font-normal">
-                {papers.length} Papers · Verified Chunks · Notes
+                {scope === 'paper' && selectedPaper ? (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    1 Selected Paper ({selectedPaper.title.substring(0, 22)}...) · Isolated
+                  </span>
+                ) : (
+                  <span>{papers.length} Project Papers · Verified Chunks · Notes</span>
+                )}
               </div>
             </div>
           </div>
