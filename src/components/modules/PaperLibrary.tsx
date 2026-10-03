@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Paper } from '@/lib/db/types';
 import {
   BookOpen,
@@ -16,6 +16,11 @@ import {
   Send,
   ShieldCheck,
   CheckCircle,
+  Search,
+  Filter,
+  ArrowUpDown,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 
 interface PaperLibraryProps {
@@ -26,6 +31,10 @@ interface PaperLibraryProps {
   onOpenCopilotForPaper?: (paperId: string) => void;
   onDeletePaper?: (paperId: string) => void;
 }
+
+type FilterCategory = 'all' | 'verified' | 'uploaded' | 'sample';
+type SortOption = 'newest' | 'year' | 'citations' | 'title';
+type ViewDensity = 'cards' | 'table';
 
 export const PaperLibrary: React.FC<PaperLibraryProps> = ({
   projectId,
@@ -40,6 +49,12 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Search, Filter, Sort, and View density state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState<FilterCategory>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('newest');
+  const [viewDensity, setViewDensity] = useState<ViewDensity>('cards');
 
   // Delete action states
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
@@ -59,6 +74,47 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
       modelUsed: string;
     }>
   >([]);
+
+  // Filtered and sorted papers
+  const filteredPapers = useMemo(() => {
+    let result = papers.filter((paper) => {
+      // 1. Category Filter
+      if (filterCategory === 'verified' && paper.metadataStatus !== 'verified') return false;
+      if (filterCategory === 'uploaded' && paper.sourceProvider !== 'upload') return false;
+      if (filterCategory === 'sample' && !paper.isDemo) return false;
+
+      // 2. Search Filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const titleMatch = (paper.title || '').toLowerCase().includes(q);
+        const authorMatch = (paper.authors || []).some((a) => a.toLowerCase().includes(q));
+        const venueMatch = (paper.journalOrConference || '').toLowerCase().includes(q);
+        const doiMatch = (paper.doi || '').toLowerCase().includes(q);
+        if (!titleMatch && !authorMatch && !venueMatch && !doiMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // Sort papers
+    return result.sort((a, b) => {
+      if (sortOption === 'year') {
+        return (b.publicationYear || 0) - (a.publicationYear || 0);
+      }
+      if (sortOption === 'citations') {
+        return (b.citationCount || 0) - (a.citationCount || 0);
+      }
+      if (sortOption === 'title') {
+        return (a.title || '').localeCompare(b.title || '');
+      }
+      // default 'newest'
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
+  }, [papers, searchQuery, filterCategory, sortOption]);
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,10 +338,10 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
         <div>
           <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
             <BookOpen className="w-4 h-4 text-blue-500" />
-            <span>Project Literature Library ({papers.length} Publications)</span>
+            <span>Academic Reference Catalog ({papers.length} Publications)</span>
           </h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Structured full-text catalog with verified DOIs, section extraction, and vector-indexed evidence.
+            Structured full-text corpus with verified DOIs, section extraction, and vector-indexed evidence.
           </p>
         </div>
 
@@ -302,14 +358,14 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
               <span>
                 {isDeduplicating
                   ? 'Removing Duplicates...'
-                  : `Deduplicate Library (${duplicateExcessCount} duplicate${duplicateExcessCount > 1 ? 's' : ''})`}
+                  : `Deduplicate Library (${duplicateExcessCount})`}
               </span>
             </button>
           )}
 
           <button
             onClick={() => setIsUploading(true)}
-            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 text-xs font-semibold rounded-xl shadow-xs hover:shadow-sm transition-all"
+            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 text-xs font-semibold rounded-xl shadow-xs hover:shadow-sm transition-all cursor-pointer"
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Upload Research PDF</span>
@@ -317,160 +373,408 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
         </div>
       </div>
 
+      {/* Academic Filter, Search & View Controls Bar */}
+      <div className="bg-white dark:bg-[#0f1422] p-3 sm:p-4 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {/* Search Input */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search publications by title, author, venue, or DOI..."
+            className="w-full pl-9 pr-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-0.5 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Filter Chips & View Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Category Chips */}
+          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-xl text-[11px] font-medium text-zinc-600 dark:text-zinc-300">
+            <button
+              type="button"
+              onClick={() => setFilterCategory('all')}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                filterCategory === 'all'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-semibold shadow-2xs'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              All ({papers.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterCategory('verified')}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                filterCategory === 'verified'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-semibold shadow-2xs'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              Verified
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterCategory('uploaded')}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                filterCategory === 'uploaded'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-semibold shadow-2xs'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              PDFs
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterCategory('sample')}
+              className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                filterCategory === 'sample'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-semibold shadow-2xs'
+                  : 'hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              Sample
+            </button>
+          </div>
+
+          {/* Sort Selector */}
+          <div className="flex items-center space-x-1 bg-zinc-100 dark:bg-zinc-800/80 px-2 py-1 rounded-xl text-[11px]">
+            <ArrowUpDown className="w-3.5 h-3.5 text-zinc-400" />
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value as SortOption)}
+              className="bg-transparent text-zinc-700 dark:text-zinc-300 font-medium focus:outline-none cursor-pointer"
+            >
+              <option value="newest">Newest First</option>
+              <option value="year">Year (Desc)</option>
+              <option value="citations">Citations (Desc)</option>
+              <option value="title">Title (A-Z)</option>
+            </select>
+          </div>
+
+          {/* Density Toggle */}
+          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setViewDensity('cards')}
+              className={`p-1 rounded-lg cursor-pointer ${
+                viewDensity === 'cards'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xs'
+                  : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'
+              }`}
+              title="Card view"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewDensity('table')}
+              className={`p-1 rounded-lg cursor-pointer ${
+                viewDensity === 'table'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xs'
+                  : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'
+              }`}
+              title="Compact reference table view"
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Empty State */}
-      {papers.length === 0 && (
+      {filteredPapers.length === 0 && (
         <div className="text-center py-16 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white/50 dark:bg-[#0f1422]/40 space-y-3.5">
           <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center mx-auto text-zinc-400 shadow-2xs">
             <BookOpen className="w-6 h-6" />
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
-              No papers cataloged in this project yet
+              {searchQuery || filterCategory !== 'all'
+                ? 'No publications match your filter criteria'
+                : 'No papers cataloged in this project yet'}
             </h3>
             <p className="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed">
-              Discover and add academic literature using the Academic Search engine, or upload a research PDF manuscript to extract structured sections.
+              {searchQuery || filterCategory !== 'all'
+                ? 'Try broadening your search term or clearing the active category filters.'
+                : 'Discover and add academic literature using the Academic Search engine, or upload a research PDF manuscript to extract structured sections.'}
             </p>
           </div>
-          <button
-            onClick={() => setIsUploading(true)}
-            className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold rounded-xl shadow-xs"
-          >
-            Upload your first PDF
-          </button>
+          {searchQuery || filterCategory !== 'all' ? (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setFilterCategory('all');
+              }}
+              className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-200 text-xs font-semibold rounded-xl cursor-pointer"
+            >
+              Reset Filters
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsUploading(true)}
+              className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold rounded-xl shadow-xs cursor-pointer"
+            >
+              Upload your first PDF
+            </button>
+          )}
         </div>
       )}
 
-      {/* Papers Grid */}
-      <div className="grid grid-cols-1 gap-3.5">
-        {papers.map((paper) => (
-          <div
-            key={paper.id}
-            className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center space-x-2">
-                {paper.isDemo ? (
-                  <span className="text-[10px] font-mono uppercase bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/60 font-bold">
-                    SAMPLE PAPER
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-mono uppercase bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded-md font-medium">
-                    {paper.sourceProvider}
-                  </span>
-                )}
-
-                {paper.metadataStatus === 'verified' && (
-                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
-                    <CheckCircle className="w-3 h-3" />
-                    <span>Verified Metadata</span>
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-1.5 text-xs">
-                {onOpenCopilotForPaper && (
-                  <button
-                    onClick={() => onOpenCopilotForPaper(paper.id)}
-                    className="inline-flex items-center space-x-1 px-2.5 py-1 text-amber-800 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 rounded-lg border border-amber-200 dark:border-amber-800/60 transition-colors font-semibold text-[11px]"
-                    title="Open paper in persistent Research Copilot with multi-turn chat"
+      {/* Render View: COMPACT REFERENCE TABLE */}
+      {viewDensity === 'table' && filteredPapers.length > 0 && (
+        <div className="bg-white dark:bg-[#0f1422] border border-zinc-200/90 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-900/60 text-[11px] font-mono uppercase tracking-wider text-zinc-500">
+                  <th className="py-3 px-4">Publication / Authors</th>
+                  <th className="py-3 px-3">Year & Venue</th>
+                  <th className="py-3 px-3">Source & Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-xs">
+                {filteredPapers.map((paper) => (
+                  <tr
+                    key={paper.id}
+                    className="hover:bg-zinc-50/60 dark:hover:bg-zinc-900/40 transition-colors"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                    <span>Ask Copilot</span>
-                  </button>
-                )}
+                    <td className="py-3 px-4 max-w-sm sm:max-w-md">
+                      <div className="font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-1">
+                        {paper.title}
+                      </div>
+                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-1">
+                        {paper.authors.slice(0, 3).join(', ')}
+                        {paper.authors.length > 3 ? ' et al.' : ''}
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap text-zinc-600 dark:text-zinc-400">
+                      <div className="font-mono text-[11px] font-semibold text-zinc-900 dark:text-zinc-100">
+                        {paper.publicationYear}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 truncate max-w-[150px]">
+                        {paper.journalOrConference || 'Preprint'}
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="text-[10px] font-mono uppercase bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-1.5 py-0.5 rounded">
+                          {paper.sourceProvider}
+                        </span>
+                        {paper.metadataStatus === 'verified' && (
+                          <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center space-x-0.5">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>Verified</span>
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center space-x-1">
+                        {onOpenCopilotForPaper && (
+                          <button
+                            onClick={() => onOpenCopilotForPaper(paper.id)}
+                            className="p-1.5 text-amber-700 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 rounded-lg transition-colors cursor-pointer"
+                            title="Ask Copilot"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setActiveAskPaper(paper);
+                            setChatHistory([]);
+                          }}
+                          className="p-1.5 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                          title="Quick Inquire"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onSelectPaperForAnalysis(paper.id)}
+                          className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 rounded-lg font-medium text-[11px] transition-colors cursor-pointer"
+                        >
+                          Analyze
+                        </button>
+                        {confirmingDeleteId === paper.id ? (
+                          <div className="inline-flex items-center space-x-1">
+                            <button
+                              type="button"
+                              onClick={() => executeDeletePaper(paper.id)}
+                              className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[11px] font-semibold transition-colors cursor-pointer"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmingDeleteId(null)}
+                              className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingDeleteId(paper.id)}
+                            className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-                <button
-                  onClick={() => {
-                    setActiveAskPaper(paper);
-                    setChatHistory([]);
-                  }}
-                  className="inline-flex items-center space-x-1 px-2.5 py-1 text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors font-medium text-[11px]"
-                  title="Quick single-paper RAG inspector"
-                >
-                  <MessageSquare className="w-3.5 h-3.5 text-zinc-500" />
-                  <span>Quick Inquire</span>
-                </button>
+      {/* Render View: STANDARD CARD GRID */}
+      {viewDensity === 'cards' && filteredPapers.length > 0 && (
+        <div className="grid grid-cols-1 gap-3.5">
+          {filteredPapers.map((paper) => (
+            <div
+              key={paper.id}
+              className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center space-x-2">
+                  {paper.isDemo ? (
+                    <span className="text-[10px] font-mono uppercase bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/60 font-bold">
+                      SAMPLE PAPER
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono uppercase bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded-md font-medium">
+                      {paper.sourceProvider}
+                    </span>
+                  )}
 
-                <button
-                  onClick={() => onSelectPaperForAnalysis(paper.id)}
-                  className="inline-flex items-center space-x-1 px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 rounded-lg transition-colors font-semibold text-[11px] shadow-2xs"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Structured Analysis</span>
-                </button>
+                  {paper.metadataStatus === 'verified' && (
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
+                      <CheckCircle className="w-3 h-3" />
+                      <span>Verified Metadata</span>
+                    </span>
+                  )}
+                </div>
 
-                {confirmingDeleteId === paper.id ? (
-                  <div className="flex items-center space-x-1 animate-in fade-in duration-150">
+                <div className="flex items-center space-x-1.5 text-xs">
+                  {onOpenCopilotForPaper && (
                     <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        executeDeletePaper(paper.id);
-                      }}
-                      disabled={deletingId === paper.id}
-                      className="inline-flex items-center space-x-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[11px] font-semibold transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
-                      title="Click to permanently confirm deletion"
+                      onClick={() => onOpenCopilotForPaper(paper.id)}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1 text-amber-800 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 rounded-lg border border-amber-200 dark:border-amber-800/60 transition-colors font-semibold text-[11px] cursor-pointer"
+                      title="Open paper in persistent Research Copilot with multi-turn chat"
                     >
-                      {deletingId === paper.id ? (
-                        <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <Trash2 className="w-3 h-3" />
-                      )}
-                      <span>Confirm Delete</span>
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      <span>Ask Copilot</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        setConfirmingDeleteId(null);
-                      }}
-                      className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                      title="Cancel"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
+                  )}
+
                   <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setConfirmingDeleteId(paper.id);
+                    onClick={() => {
+                      setActiveAskPaper(paper);
+                      setChatHistory([]);
                     }}
-                    className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
-                    title="Remove Paper from Project"
+                    className="inline-flex items-center space-x-1 px-2.5 py-1 text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors font-medium text-[11px] cursor-pointer"
+                    title="Quick single-paper RAG inspector"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <MessageSquare className="w-3.5 h-3.5 text-zinc-500" />
+                    <span>Quick Inquire</span>
                   </button>
+
+                  <button
+                    onClick={() => onSelectPaperForAnalysis(paper.id)}
+                    className="inline-flex items-center space-x-1 px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 rounded-lg transition-colors font-semibold text-[11px] shadow-2xs cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Structured Analysis</span>
+                  </button>
+
+                  {confirmingDeleteId === paper.id ? (
+                    <div className="flex items-center space-x-1 animate-in fade-in duration-150">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          executeDeletePaper(paper.id);
+                        }}
+                        disabled={deletingId === paper.id}
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[11px] font-semibold transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                        title="Click to permanently confirm deletion"
+                      >
+                        {deletingId === paper.id ? (
+                          <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3 h-3" />
+                        )}
+                        <span>Confirm Delete</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setConfirmingDeleteId(null);
+                        }}
+                        className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                        title="Cancel"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setConfirmingDeleteId(paper.id);
+                      }}
+                      className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
+                      title="Remove Paper from Project"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
+                  {paper.title}
+                </h3>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+                  {paper.authors.join(', ')} · <span className="italic">{paper.journalOrConference || 'Publication'}</span> ({paper.publicationYear})
+                </p>
+                {paper.doi && (
+                  <p className="text-[11px] font-mono text-zinc-500 mt-0.5">
+                    DOI: {paper.doi} {paper.citationCount > 0 && `· ${paper.citationCount} citations`}
+                  </p>
                 )}
               </div>
-            </div>
 
-            <div>
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
-                {paper.title}
-              </h3>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                {paper.authors.join(', ')} · <span className="italic">{paper.journalOrConference || 'Publication'}</span> ({paper.publicationYear})
-              </p>
-              {paper.doi && (
-                <p className="text-[11px] font-mono text-zinc-500 mt-0.5">
-                  DOI: {paper.doi} {paper.citationCount > 0 && `· ${paper.citationCount} citations`}
+              {paper.abstract && (
+                <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+                  {paper.abstract}
                 </p>
               )}
             </div>
-
-            {paper.abstract && (
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
-                {paper.abstract}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* PDF Upload Modal */}
       {isUploading && (
@@ -483,7 +787,7 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
               </h3>
               <button
                 onClick={() => setIsUploading(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-md"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-md cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -547,14 +851,14 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsUploading(false)}
-                  className="px-3.5 py-2 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl font-medium"
+                  className="px-3.5 py-2 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!uploadFile}
-                  className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold rounded-xl hover:bg-zinc-800 disabled:opacity-50 shadow-xs"
+                  className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold rounded-xl hover:bg-zinc-800 disabled:opacity-50 shadow-xs cursor-pointer"
                 >
                   Process & Index
                 </button>
@@ -586,7 +890,7 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                       setActiveAskPaper(null);
                       onOpenCopilotForPaper(paperId);
                     }}
-                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded-xl font-semibold transition-colors"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded-xl font-semibold transition-colors cursor-pointer"
                     title="Transfer context to full persistent AI chat session"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-600" />
@@ -595,7 +899,7 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                 )}
                 <button
                   onClick={() => setActiveAskPaper(null)}
-                  className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1.5 rounded-lg"
+                  className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1.5 rounded-lg cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -617,14 +921,14 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                       'What dataset was used and what is its size?',
                       'Explain the proposed methodology.',
                       'What are the stated limitations?',
-                      'Why was XLM-R or transformer model selected?',
+                      'Why was this specific model architecture selected?',
                     ].map((sampleQ, i) => (
                       <button
                         key={i}
                         onClick={() => {
                           setQuestion(sampleQ);
                         }}
-                        className="text-[11px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 px-3 py-1 rounded-full text-left font-medium transition-colors"
+                        className="text-[11px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 px-3 py-1 rounded-full text-left font-medium transition-colors cursor-pointer"
                       >
                         {sampleQ}
                       </button>
@@ -702,7 +1006,7 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
               <button
                 type="submit"
                 disabled={asking || !question.trim()}
-                className="px-4 py-2.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-xl text-xs font-semibold hover:bg-zinc-800 disabled:opacity-50 transition-colors"
+                className="px-4 py-2.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-xl text-xs font-semibold hover:bg-zinc-800 disabled:opacity-50 transition-colors cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>
@@ -710,7 +1014,6 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
           </div>
         </div>
       )}
-
     </div>
   );
 };
