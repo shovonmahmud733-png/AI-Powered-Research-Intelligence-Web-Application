@@ -10,6 +10,7 @@ import {
   Download,
   FileCode,
   Layers,
+  FileText,
 } from 'lucide-react';
 
 interface CitationManagerProps {
@@ -81,22 +82,24 @@ export const CitationManager: React.FC<CitationManagerProps> = ({
   return (
     <div className="space-y-6">
       {/* Header & Style Picker */}
-      <div className="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#0f1422] p-5 sm:p-6 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
-            <BookmarkCheck className="w-4 h-4 text-zinc-500" />
+          <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
+              <BookmarkCheck className="w-4 h-4" />
+            </span>
             <span>Citation Intelligence & Reference Exporter</span>
           </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
             Generates compliant academic citations from verified paper metadata. Never fabricates DOIs or publication years.
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2 shrink-0">
           <select
             value={style}
             onChange={(e) => setStyle(e.target.value as CitationStyle)}
-            className="text-xs font-medium bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-zinc-900 dark:text-zinc-100"
+            className="text-xs font-medium bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400"
           >
             {Object.entries(styleNames).map(([k, label]) => (
               <option key={k} value={k}>
@@ -108,7 +111,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({
           {bundle && (
             <button
               onClick={downloadBundleFile}
-              className="inline-flex items-center space-x-1.5 px-3 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-medium rounded-lg hover:bg-zinc-800 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold rounded-xl hover:bg-zinc-800 dark:hover:bg-white shadow-xs transition-all active:scale-[0.98]"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export {style.toUpperCase()}</span>
@@ -119,20 +122,23 @@ export const CitationManager: React.FC<CitationManagerProps> = ({
 
       {/* BibTeX / RIS Bundle preview if selected */}
       {bundle && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-xs border-b border-zinc-100 dark:border-zinc-800 pb-2">
-            <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">
-              Combined {style.toUpperCase()} Reference Bundle
-            </span>
+        <div className="bg-white dark:bg-[#0f1422] border border-zinc-200/90 dark:border-zinc-800/80 rounded-2xl p-5 shadow-xs space-y-3">
+          <div className="flex items-center justify-between text-xs border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
+            <div className="flex items-center gap-2">
+              <FileCode className="w-4 h-4 text-zinc-400" />
+              <span className="font-semibold text-zinc-800 dark:text-zinc-200 font-mono text-xs">
+                Combined {style.toUpperCase()} Reference Bundle
+              </span>
+            </div>
             <button
               onClick={() => copyToClipboard(bundle)}
-              className="inline-flex items-center space-x-1 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200/70 dark:hover:bg-zinc-700/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-zinc-700/80 shadow-xs transition-all"
             >
-              {copiedBundle ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedBundle ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
               <span>{copiedBundle ? 'Copied Bundle!' : 'Copy Entire Bundle'}</span>
             </button>
           </div>
-          <pre className="text-[11px] font-mono text-zinc-800 dark:text-zinc-200 bg-zinc-50 dark:bg-zinc-950 p-3 rounded-lg overflow-x-auto max-h-48 leading-relaxed">
+          <pre className="text-[11px] font-mono text-zinc-800 dark:text-zinc-200 bg-zinc-50/80 dark:bg-[#131929] p-4 rounded-xl border border-zinc-200/60 dark:border-zinc-800/70 overflow-x-auto max-h-56 leading-relaxed selection:bg-zinc-200 dark:selection:bg-zinc-800">
             {bundle}
           </pre>
         </div>
@@ -140,29 +146,35 @@ export const CitationManager: React.FC<CitationManagerProps> = ({
 
       {/* Individual Citations */}
       <div className="space-y-3">
+        {loading && (
+          <div className="text-center py-12 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl bg-white dark:bg-[#0f1422] text-xs text-zinc-400">
+            Formatting references in {styleNames[style]}...
+          </div>
+        )}
+
         {citations.map((c, idx) => (
           <div
             key={c.paperId}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs space-y-2"
+            className="bg-white dark:bg-[#0f1422] border border-zinc-200/90 dark:border-zinc-800/80 rounded-2xl p-5 shadow-xs space-y-2.5 transition-all hover:border-zinc-300 dark:hover:border-zinc-700"
           >
-            <div className="flex items-center justify-between text-xs border-b border-zinc-100 dark:border-zinc-800 pb-2">
-              <span className="font-semibold text-zinc-900 dark:text-zinc-100 truncate pr-4">
+            <div className="flex items-center justify-between text-xs border-b border-zinc-100 dark:border-zinc-800/80 pb-2.5">
+              <span className="font-semibold text-zinc-950 dark:text-zinc-50 truncate pr-4">
                 {c.title}
               </span>
               <button
                 onClick={() => copyToClipboard(c.citation, idx)}
-                className="inline-flex items-center space-x-1 px-2 py-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded text-xs transition-colors shrink-0"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-xs font-medium transition-colors shrink-0"
               >
                 {copiedIndex === idx ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
-                  <Copy className="w-3.5 h-3.5" />
+                  <Copy className="w-3.5 h-3.5 text-zinc-400" />
                 )}
                 <span>{copiedIndex === idx ? 'Copied' : 'Copy'}</span>
               </button>
             </div>
 
-            <div className="text-xs text-zinc-800 dark:text-zinc-200 leading-relaxed font-sans select-all">
+            <div className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed font-sans select-all bg-zinc-50/50 dark:bg-zinc-950/40 p-3 rounded-xl border border-zinc-200/50 dark:border-zinc-850">
               {c.citation}
             </div>
           </div>

@@ -10,6 +10,7 @@ import {
   Calendar,
   Layers,
   Sparkles,
+  History,
 } from 'lucide-react';
 
 interface ResearchMemoryViewProps {
@@ -80,54 +81,56 @@ export const ResearchMemoryView: React.FC<ResearchMemoryViewProps> = ({ projectI
   };
 
   const categoryBadges: Record<string, string> = {
-    decision: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
-    finding: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
-    terminology: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300',
-    hypothesis: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
-    methodology: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300',
-    constraint: 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
+    decision: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
+    finding: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
+    terminology: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20',
+    hypothesis: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
+    methodology: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/20',
+    constraint: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20',
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#0f1422] p-5 sm:p-6 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
-            <BrainCircuit className="w-4 h-4 text-zinc-500" />
+          <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
+              <BrainCircuit className="w-4 h-4" />
+            </span>
             <span>Persistent Project-Level Research Memory</span>
           </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            Stores foundational lab decisions, verified terminology, hypotheses, and methodological milestones to maintain context.
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+            Stores foundational lab decisions, verified terminology, hypotheses, and methodological milestones to maintain persistent context.
           </p>
         </div>
 
         <button
           onClick={() => setIsAdding(true)}
-          className="inline-flex items-center space-x-1 px-3 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-lg text-xs font-medium hover:bg-zinc-800 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-xl text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-white transition-all active:scale-[0.98] shadow-xs shrink-0"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Record Decision / Memory</span>
         </button>
       </div>
 
-      {/* Add Modal */}
+      {/* Add Modal / Form */}
       {isAdding && (
-        <div className="p-4 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl space-y-3">
-          <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+        <div className="p-5 sm:p-6 bg-white dark:bg-[#0f1422] border border-zinc-200/90 dark:border-zinc-800/80 rounded-2xl shadow-xs space-y-4 animate-in fade-in duration-200">
+          <h3 className="text-xs font-semibold text-zinc-950 dark:text-zinc-50 uppercase tracking-wider font-mono">
             Log Project Memory Entry
           </h3>
 
-          <form onSubmit={handleCreate} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] font-medium text-zinc-500 block mb-1">
+                <label className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-1">
                   Category
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full text-xs p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
+                  className="w-full text-xs p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400 font-medium"
                 >
                   <option value="decision">Researcher Decision</option>
                   <option value="finding">Important Finding</option>
@@ -139,7 +142,7 @@ export const ResearchMemoryView: React.FC<ResearchMemoryViewProps> = ({ projectI
               </div>
 
               <div>
-                <label className="text-[11px] font-medium text-zinc-500 block mb-1">
+                <label className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-1">
                   Context / Origin (e.g. Lab Meeting, Week 2)
                 </label>
                 <input
@@ -147,13 +150,13 @@ export const ResearchMemoryView: React.FC<ResearchMemoryViewProps> = ({ projectI
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
                   placeholder="e.g. Lab Meeting — Week 3"
-                  className="w-full text-xs p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
+                  className="w-full text-xs p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-[11px] font-medium text-zinc-500 block mb-1">
+              <label className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-1">
                 Memory Content
               </label>
               <textarea
@@ -162,21 +165,21 @@ export const ResearchMemoryView: React.FC<ResearchMemoryViewProps> = ({ projectI
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Detail the rationale, consensus, or definition..."
-                className="w-full text-xs p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
+                className="w-full text-xs p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400 leading-relaxed"
               />
             </div>
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsAdding(false)}
-                className="px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 rounded"
+                className="px-3.5 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-3.5 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-medium rounded hover:bg-zinc-800"
+                className="px-4 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold rounded-xl hover:bg-zinc-800 dark:hover:bg-white shadow-xs transition-all"
               >
                 Save to Memory
               </button>
@@ -190,12 +193,12 @@ export const ResearchMemoryView: React.FC<ResearchMemoryViewProps> = ({ projectI
         {memoryItems.map((item) => (
           <div
             key={item.id}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs space-y-2"
+            className="bg-white dark:bg-[#0f1422] border border-zinc-200/90 dark:border-zinc-800/80 rounded-2xl p-5 shadow-xs space-y-2.5 transition-all hover:border-zinc-300 dark:hover:border-zinc-700"
           >
-            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-2">
-              <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-2.5">
+              <div className="flex items-center gap-2">
                 <span
-                  className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-semibold ${
+                  className={`text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-md font-semibold border ${
                     categoryBadges[item.category] || 'bg-zinc-100 text-zinc-800'
                   }`}
                 >
@@ -203,20 +206,21 @@ export const ResearchMemoryView: React.FC<ResearchMemoryViewProps> = ({ projectI
                 </span>
 
                 {item.context && (
-                  <span className="text-xs text-zinc-500 font-medium">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                     · {item.context}
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center space-x-2 text-xs font-mono text-zinc-400">
-                <span className="flex items-center space-x-1">
-                  <Calendar className="w-3 h-3" />
+              <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" />
                   <span>{item.date}</span>
                 </span>
                 <button
                   onClick={() => handleDelete(item.id)}
-                  className="p-1 hover:text-red-600 text-zinc-400"
+                  className="p-1 hover:text-red-500 dark:hover:text-red-400 rounded transition-colors"
+                  title="Remove record"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

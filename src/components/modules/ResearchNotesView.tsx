@@ -12,6 +12,7 @@ import {
   Search,
   BookOpen,
   Calendar,
+  PenSquare,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -129,25 +130,29 @@ export const ResearchNotesView: React.FC<ResearchNotesViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header and Controls */}
-      <div className="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#0f1422] p-5 sm:p-6 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
-            <FileText className="w-4 h-4 text-zinc-500" />
-            <span>Structured Research Notes ({notes.length} Documents)</span>
+          <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
+              <FileText className="w-4 h-4" />
+            </span>
+            <span>Structured Research Notes</span>
+            <span className="text-xs font-mono font-medium text-zinc-400">({notes.length} Documents)</span>
           </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
             Markdown-powered research logs with entity cross-linking to papers, evidence, and gaps.
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2.5 shrink-0">
           <div className="relative">
+            <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search notes or tags..."
-              className="text-xs bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-800 dark:text-zinc-200 max-w-[160px]"
+              placeholder="Search notes..."
+              className="text-xs bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-8 pr-3 py-1.5 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 w-36 sm:w-44 transition-all"
             />
           </div>
 
@@ -159,7 +164,7 @@ export const ResearchNotesView: React.FC<ResearchNotesViewProps> = ({
               setContent('');
               setTagInput('');
             }}
-            className="inline-flex items-center space-x-1 px-3 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-lg text-xs font-medium hover:bg-zinc-800"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-xl text-xs font-semibold hover:bg-zinc-800 dark:hover:bg-white shadow-xs transition-all active:scale-[0.98]"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Note</span>
@@ -167,33 +172,34 @@ export const ResearchNotesView: React.FC<ResearchNotesViewProps> = ({
         </div>
       </div>
 
-      {/* Editor Modal */}
+      {/* Editor Modal / Inline Form */}
       {isCreating && (
-        <div className="p-4 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl space-y-3">
-          <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-            {editingId ? 'Edit Research Note' : 'Create New Research Note'}
+        <div className="p-5 sm:p-6 bg-white dark:bg-[#0f1422] border border-zinc-200/90 dark:border-zinc-800/80 rounded-2xl shadow-xs space-y-4 animate-in fade-in duration-200">
+          <h3 className="text-xs font-semibold text-zinc-950 dark:text-zinc-50 uppercase tracking-wider font-mono flex items-center gap-2">
+            <PenSquare className="w-4 h-4 text-zinc-500" />
+            <span>{editingId ? 'Edit Research Note' : 'Create New Research Note'}</span>
           </h3>
 
-          <form onSubmit={handleSave} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] font-medium text-zinc-500 block mb-1">Title</label>
+                <label className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-1">Title</label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Synthesis of Tokenizer Fragmentation Bottlenecks"
-                  className="w-full text-xs p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
+                  className="w-full text-xs p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-medium text-zinc-500 block mb-1">Link to Paper</label>
+                <label className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-1">Link to Paper</label>
                 <select
                   value={linkedPaperId}
                   onChange={(e) => setLinkedPaperId(e.target.value)}
-                  className="w-full text-xs p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
+                  className="w-full text-xs p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400"
                 >
                   <option value="">No linked paper</option>
                   {papers.map((p) => (
@@ -206,7 +212,7 @@ export const ResearchNotesView: React.FC<ResearchNotesViewProps> = ({
             </div>
 
             <div>
-              <label className="text-[11px] font-medium text-zinc-500 block mb-1">
+              <label className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-1">
                 Tags (Comma separated)
               </label>
               <input
@@ -214,12 +220,12 @@ export const ResearchNotesView: React.FC<ResearchNotesViewProps> = ({
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 placeholder="Tokenizer, Low-Resource, Subwords"
-                className="w-full text-xs p-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
+                className="w-full text-xs p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400 font-mono"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-medium text-zinc-500 block mb-1">
+              <label className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-1">
                 Content (Markdown supported)
               </label>
               <textarea
@@ -228,21 +234,21 @@ export const ResearchNotesView: React.FC<ResearchNotesViewProps> = ({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Write your research synthesis, methodology notes, or hypothesis tests..."
-                className="w-full text-xs font-mono p-3 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 leading-relaxed"
+                className="w-full text-xs font-mono p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400 leading-relaxed"
               />
             </div>
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsCreating(false)}
-                className="px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 rounded"
+                className="px-3.5 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-medium rounded hover:bg-zinc-800"
+                className="px-4 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold rounded-xl hover:bg-zinc-800 dark:hover:bg-white shadow-xs transition-all"
               >
                 Save Note
               </button>
@@ -259,32 +265,32 @@ export const ResearchNotesView: React.FC<ResearchNotesViewProps> = ({
           return (
             <div
               key={note.id}
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs space-y-3 flex flex-col justify-between"
+              className="bg-white dark:bg-[#0f1422] border border-zinc-200/90 dark:border-zinc-800/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4 flex flex-col justify-between transition-all hover:border-zinc-300 dark:hover:border-zinc-700"
             >
-              <div className="space-y-2">
-                <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-2">
-                  <div className="flex items-center space-x-1.5 flex-wrap">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     {note.tags.map((t, idx) => (
                       <span
                         key={idx}
-                        className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-2 py-0.5 rounded-full font-mono"
+                        className="text-[10px] bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 px-2 py-0.5 rounded-md font-mono font-medium border border-zinc-200/60 dark:border-zinc-700/60"
                       >
                         #{t}
                       </span>
                     ))}
                   </div>
 
-                  <div className="flex items-center space-x-1 text-zinc-400">
+                  <div className="flex items-center gap-1 text-zinc-400">
                     <button
                       onClick={() => handleEdit(note)}
-                      className="p-1 hover:text-zinc-800 dark:hover:text-zinc-200"
+                      className="p-1.5 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                       title="Edit Note"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDelete(note.id)}
-                      className="p-1 hover:text-red-600"
+                      className="p-1.5 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
                       title="Delete Note"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -292,13 +298,13 @@ export const ResearchNotesView: React.FC<ResearchNotesViewProps> = ({
                   </div>
                 </div>
 
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                <h3 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50 leading-snug">
                   {note.title}
                 </h3>
 
                 {linkedPaper && (
-                  <div className="text-[11px] text-zinc-500 flex items-center space-x-1">
-                    <Link2 className="w-3 h-3 text-zinc-400" />
+                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 bg-zinc-50/70 dark:bg-[#131929] px-2.5 py-1.5 rounded-lg border border-zinc-200/60 dark:border-zinc-800/70">
+                    <Link2 className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                     <span className="truncate">Linked: {linkedPaper.title}</span>
                   </div>
                 )}
@@ -308,8 +314,9 @@ export const ResearchNotesView: React.FC<ResearchNotesViewProps> = ({
                 </div>
               </div>
 
-              <div className="text-[10px] font-mono text-zinc-400 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                Updated {new Date(note.updatedAt).toLocaleDateString()}
+              <div className="text-[10px] font-mono text-zinc-400 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
+                <span>Updated {new Date(note.updatedAt).toLocaleDateString()}</span>
+                <span>ID: {note.id.substring(0, 8)}</span>
               </div>
             </div>
           );

@@ -12,6 +12,7 @@ import {
   Cpu,
   Layers,
   Sparkles,
+  Award,
 } from 'lucide-react';
 
 interface MethodologyAndReproducibilityProps {
@@ -41,25 +42,25 @@ export const MethodologyAndReproducibility: React.FC<MethodologyAndReproducibili
     switch (status) {
       case 'Available':
         return (
-          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+          <span className="text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
             AVAILABLE
           </span>
         );
       case 'Missing':
         return (
-          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+          <span className="text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
             MISSING
           </span>
         );
       case 'Not Reported':
         return (
-          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-zinc-700">
+          <span className="text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200/80 dark:border-zinc-700/80">
             NOT REPORTED
           </span>
         );
       default:
         return (
-          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-zinc-100 text-zinc-600">
+          <span className="text-[10px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
             UNKNOWN
           </span>
         );
@@ -69,13 +70,15 @@ export const MethodologyAndReproducibility: React.FC<MethodologyAndReproducibili
   return (
     <div className="space-y-6">
       {/* Header & Selector */}
-      <div className="bg-white dark:bg-zinc-900 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#0f1422] p-5 sm:p-6 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
-            <ShieldCheck className="w-4 h-4 text-zinc-500" />
+          <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <ShieldCheck className="w-4 h-4" />
+            </span>
             <span>Methodology & Scientific Reproducibility Analyzer</span>
           </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
             Audit empirical ML/NLP pipelines and reproducibility checklists against open science standards.
           </p>
         </div>
@@ -83,7 +86,7 @@ export const MethodologyAndReproducibility: React.FC<MethodologyAndReproducibili
         <select
           value={selectedPaperId}
           onChange={(e) => setSelectedPaperId(e.target.value)}
-          className="text-xs bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-zinc-800 dark:text-zinc-200 max-w-[280px] truncate"
+          className="text-xs bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-zinc-800 dark:text-zinc-200 max-w-[280px] truncate focus:outline-none focus:ring-1 focus:ring-zinc-400"
         >
           {papers.map((p) => (
             <option key={p.id} value={p.id}>
@@ -93,85 +96,88 @@ export const MethodologyAndReproducibility: React.FC<MethodologyAndReproducibili
         </select>
       </div>
 
-      {/* Methodology Pipeline Visualization (Requirement 21) */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-xs space-y-3">
-        <h3 className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider">
+      {/* Methodology Pipeline Visualization */}
+      <div className="bg-white dark:bg-[#0f1422] border border-zinc-200/90 dark:border-zinc-800/80 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+        <h3 className="text-xs font-semibold text-zinc-950 dark:text-zinc-50 uppercase tracking-wider font-mono">
           Methodological Pipeline Flow
         </h3>
 
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-2 text-center text-xs">
-          <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] text-zinc-400 font-mono">STAGE 1</div>
-            <div className="font-semibold text-zinc-800 dark:text-zinc-200 mt-1">Dataset</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Curated CSC-24</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-1 text-center text-xs">
+          <div className="p-3.5 bg-zinc-50/70 dark:bg-[#131929] rounded-xl border border-zinc-200/60 dark:border-zinc-800/70 transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono font-semibold">STAGE 1</div>
+            <div className="font-semibold text-zinc-900 dark:text-zinc-100 mt-1">Dataset</div>
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Curated CSC-24</div>
           </div>
 
-          <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] text-zinc-400 font-mono">STAGE 2</div>
-            <div className="font-semibold text-zinc-800 dark:text-zinc-200 mt-1">Preprocessing</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Emoji & Punctuation</div>
+          <div className="p-3.5 bg-zinc-50/70 dark:bg-[#131929] rounded-xl border border-zinc-200/60 dark:border-zinc-800/70 transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono font-semibold">STAGE 2</div>
+            <div className="font-semibold text-zinc-900 dark:text-zinc-100 mt-1">Preprocessing</div>
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Emoji & Punctuation</div>
           </div>
 
-          <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] text-zinc-400 font-mono">STAGE 3</div>
-            <div className="font-semibold text-zinc-800 dark:text-zinc-200 mt-1">Features</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Phonetic Subwords</div>
+          <div className="p-3.5 bg-zinc-50/70 dark:bg-[#131929] rounded-xl border border-zinc-200/60 dark:border-zinc-800/70 transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono font-semibold">STAGE 3</div>
+            <div className="font-semibold text-zinc-900 dark:text-zinc-100 mt-1">Features</div>
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Phonetic Subwords</div>
           </div>
 
-          <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] text-zinc-400 font-mono">STAGE 4</div>
-            <div className="font-semibold text-zinc-800 dark:text-zinc-200 mt-1">Model</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">XLM-RoBERTa</div>
+          <div className="p-3.5 bg-zinc-50/70 dark:bg-[#131929] rounded-xl border border-zinc-200/60 dark:border-zinc-800/70 transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono font-semibold">STAGE 4</div>
+            <div className="font-semibold text-zinc-900 dark:text-zinc-100 mt-1">Model</div>
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">XLM-RoBERTa</div>
           </div>
 
-          <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] text-zinc-400 font-mono">STAGE 5</div>
-            <div className="font-semibold text-zinc-800 dark:text-zinc-200 mt-1">Training</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">AdamW, 5 Epochs</div>
+          <div className="p-3.5 bg-zinc-50/70 dark:bg-[#131929] rounded-xl border border-zinc-200/60 dark:border-zinc-800/70 transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono font-semibold">STAGE 5</div>
+            <div className="font-semibold text-zinc-900 dark:text-zinc-100 mt-1">Training</div>
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">AdamW, 5 Epochs</div>
           </div>
 
-          <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-lg border border-zinc-200 dark:border-zinc-800">
-            <div className="text-[10px] text-zinc-400 font-mono">STAGE 6</div>
-            <div className="font-semibold text-zinc-800 dark:text-zinc-200 mt-1">Evaluation</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Macro-F1 Stratified</div>
+          <div className="p-3.5 bg-zinc-50/70 dark:bg-[#131929] rounded-xl border border-zinc-200/60 dark:border-zinc-800/70 transition-all hover:border-zinc-300 dark:hover:border-zinc-700">
+            <div className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono font-semibold">STAGE 6</div>
+            <div className="font-semibold text-zinc-900 dark:text-zinc-100 mt-1">Evaluation</div>
+            <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Macro-F1 Stratified</div>
           </div>
         </div>
       </div>
 
-      {/* Reproducibility Audit Table (Requirement 22) */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs space-y-2">
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+      {/* Reproducibility Audit Table */}
+      <div className="bg-white dark:bg-[#0f1422] border border-zinc-200/90 dark:border-zinc-800/80 rounded-2xl overflow-hidden shadow-xs space-y-0">
+        <div className="p-5 border-b border-zinc-200/90 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+            <h3 className="text-xs font-semibold text-zinc-950 dark:text-zinc-50 font-mono uppercase tracking-wider">
               Reproducibility Checklist (Open Science Standards)
             </h3>
-            <p className="text-[11px] text-zinc-500">
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
               Absence of code does not imply irreproducibility; checklist documents reported transparency.
             </p>
           </div>
-          <span className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-            Transparency Score: 78%
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 shrink-0">
+            <Award className="w-3.5 h-3.5" />
+            <span>Transparency Score: 78%</span>
           </span>
         </div>
 
-        <table className="w-full text-left text-xs border-collapse">
-          <thead>
-            <tr className="bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-500">
-              <th className="p-3 w-64">Criterion</th>
-              <th className="p-3 w-36">Status</th>
-              <th className="p-3">Verified Documentation Note</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {reproducibilityCriteria.map((c, idx) => (
-              <tr key={idx} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/50">
-                <td className="p-3 font-medium text-zinc-800 dark:text-zinc-200">{c.item}</td>
-                <td className="p-3">{getStatusBadge(c.status)}</td>
-                <td className="p-3 text-zinc-600 dark:text-zinc-400 text-[11px]">{c.note}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-zinc-50/80 dark:bg-zinc-950/80 border-b border-zinc-200/90 dark:border-zinc-800/80 text-[10px] font-mono uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400">
+                <th className="p-3.5 w-64">Criterion</th>
+                <th className="p-3.5 w-36">Status</th>
+                <th className="p-3.5">Verified Documentation Note</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+              {reproducibilityCriteria.map((c, idx) => (
+                <tr key={idx} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
+                  <td className="p-3.5 font-medium text-zinc-900 dark:text-zinc-100">{c.item}</td>
+                  <td className="p-3.5">{getStatusBadge(c.status)}</td>
+                  <td className="p-3.5 text-zinc-600 dark:text-zinc-400 text-xs leading-relaxed">{c.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

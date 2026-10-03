@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { KnowledgeGraphNode, KnowledgeGraphEdge } from '@/lib/db/types';
 import {
   Network,
@@ -11,6 +11,7 @@ import {
   Maximize2,
   Info,
   X,
+  Layers,
 } from 'lucide-react';
 
 interface KnowledgeGraphProps {
@@ -77,13 +78,13 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ projectId }) => 
   }, [projectId]);
 
   const typeColors: Record<string, { bg: string; text: string; fill: string; border: string }> = {
-    paper: { bg: 'bg-blue-100 dark:bg-blue-950', text: 'text-blue-800 dark:text-blue-200', fill: '#3b82f6', border: '#2563eb' },
-    author: { bg: 'bg-emerald-100 dark:bg-emerald-950', text: 'text-emerald-800 dark:text-emerald-200', fill: '#10b981', border: '#059669' },
-    dataset: { bg: 'bg-amber-100 dark:bg-amber-950', text: 'text-amber-800 dark:text-amber-200', fill: '#f59e0b', border: '#d97706' },
-    model: { bg: 'bg-purple-100 dark:bg-purple-950', text: 'text-purple-800 dark:text-purple-200', fill: '#8b5cf6', border: '#7c3aed' },
-    topic: { bg: 'bg-zinc-200 dark:bg-zinc-800', text: 'text-zinc-900 dark:text-zinc-100', fill: '#4b5563', border: '#1f2937' },
-    gap: { bg: 'bg-rose-100 dark:bg-rose-950', text: 'text-rose-800 dark:text-rose-200', fill: '#f43f5e', border: '#e11d48' },
-    method: { bg: 'bg-cyan-100 dark:bg-cyan-950', text: 'text-cyan-800 dark:text-cyan-200', fill: '#06b6d4', border: '#0891b2' },
+    paper: { bg: 'bg-blue-500/10', text: 'text-blue-500', fill: '#3b82f6', border: '#2563eb' },
+    author: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', fill: '#10b981', border: '#059669' },
+    dataset: { bg: 'bg-amber-500/10', text: 'text-amber-500', fill: '#f59e0b', border: '#d97706' },
+    model: { bg: 'bg-purple-500/10', text: 'text-purple-500', fill: '#8b5cf6', border: '#7c3aed' },
+    topic: { bg: 'bg-zinc-500/10', text: 'text-zinc-400', fill: '#64748b', border: '#475569' },
+    gap: { bg: 'bg-rose-500/10', text: 'text-rose-500', fill: '#f43f5e', border: '#e11d48' },
+    method: { bg: 'bg-cyan-500/10', text: 'text-cyan-500', fill: '#06b6d4', border: '#0891b2' },
   };
 
   const filteredNodes = simNodes.filter((n) => {
@@ -99,26 +100,29 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ projectId }) => 
   return (
     <div className="space-y-4">
       {/* Header and Controls */}
-      <div className="bg-white dark:bg-zinc-900 p-4 sm:p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-white dark:bg-[#0f1422] p-5 sm:p-6 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
-            <Network className="w-4 h-4 text-zinc-500" />
+          <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20">
+              <Network className="w-4 h-4" />
+            </span>
             <span>Interactive Research Knowledge Graph</span>
           </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            Constructed from verified relational database records connecting {nodes.length} entities and {edges.length} relationships.
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+            Relational topology connecting {nodes.length} entities and {edges.length} relationships across papers, datasets, models, and authors.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Search */}
           <div className="relative">
+            <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search graph entities..."
-              className="text-xs bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-800 dark:text-zinc-200 max-w-[160px]"
+              placeholder="Search graph..."
+              className="text-xs bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl pl-8 pr-3 py-1.5 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-600 w-36 sm:w-44 transition-all"
             />
           </div>
 
@@ -126,7 +130,7 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ projectId }) => 
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="text-xs bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-zinc-800 dark:text-zinc-200"
+            className="text-xs bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-1.5 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-400 font-medium"
           >
             <option value="all">All Entity Types ({nodes.length})</option>
             <option value="paper">Papers</option>
@@ -137,24 +141,24 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ projectId }) => 
           </select>
 
           {/* Zoom Controls */}
-          <div className="flex items-center space-x-1 border border-zinc-200 dark:border-zinc-800 rounded-lg p-0.5 bg-zinc-50 dark:bg-zinc-950">
+          <div className="flex items-center space-x-1 border border-zinc-200 dark:border-zinc-800 rounded-xl p-0.5 bg-zinc-50 dark:bg-zinc-950">
             <button
               onClick={() => setZoom((z) => Math.min(2, z + 0.15))}
-              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-zinc-600"
+              className="p-1.5 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 transition-colors"
               title="Zoom In"
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setZoom((z) => Math.max(0.5, z - 0.15))}
-              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-zinc-600"
+              className="p-1.5 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 transition-colors"
               title="Zoom Out"
             >
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setZoom(1)}
-              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded text-zinc-600"
+              className="p-1.5 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 rounded-lg text-zinc-600 dark:text-zinc-400 transition-colors"
               title="Reset Zoom"
             >
               <Maximize2 className="w-3.5 h-3.5" />
@@ -164,26 +168,35 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ projectId }) => 
       </div>
 
       {/* Graph Canvas Container */}
-      <div className="relative bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden shadow-inner h-[560px]">
+      <div className="relative bg-[#090d16] rounded-2xl border border-zinc-800/90 overflow-hidden shadow-inner h-[580px]">
+        {/* Background Grid Pattern */}
+        <div 
+          className="absolute inset-0 opacity-[0.04] pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(#ffffff 1px, transparent 1px)`,
+            backgroundSize: '24px 24px'
+          }}
+        />
+
         {/* Legend */}
-        <div className="absolute top-3 left-3 z-10 bg-zinc-900/90 backdrop-blur-xs border border-zinc-800 p-2.5 rounded-lg text-[10px] space-y-1.5 font-mono">
-          <div className="font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+        <div className="absolute top-4 left-4 z-10 bg-zinc-900/80 backdrop-blur-md border border-zinc-800/90 p-3 rounded-xl text-[10px] space-y-1.5 font-mono shadow-xl">
+          <div className="font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
             Entity Schema
           </div>
           {Object.entries(typeColors).map(([t, color]) => (
             <div key={t} className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color.fill }} />
-              <span className="capitalize text-zinc-300">{t}</span>
+              <span className="w-2.5 h-2.5 rounded-full ring-2 ring-white/10" style={{ backgroundColor: color.fill }} />
+              <span className="capitalize text-zinc-300 font-medium">{t}</span>
             </div>
           ))}
         </div>
 
         {/* Selected Node Details Drawer */}
         {selectedNode && (
-          <div className="absolute top-3 right-3 z-10 bg-zinc-900/95 backdrop-blur-xs border border-zinc-800 p-4 rounded-xl max-w-xs text-xs space-y-2.5 shadow-xl">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+          <div className="absolute top-4 right-4 z-10 bg-zinc-900/90 backdrop-blur-md border border-zinc-800/90 p-4 rounded-2xl max-w-xs text-xs space-y-3 shadow-2xl animate-in slide-in-from-right-2 duration-200">
+            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2.5">
               <span
-                className="text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold"
+                className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-md font-bold"
                 style={{
                   backgroundColor: typeColors[selectedNode.type]?.fill + '25',
                   color: typeColors[selectedNode.type]?.fill,
@@ -193,14 +206,14 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ projectId }) => 
               </span>
               <button
                 onClick={() => setSelectedNode(null)}
-                className="text-zinc-400 hover:text-white"
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
             <div>
-              <h4 className="font-semibold text-zinc-100 text-sm">{selectedNode.label}</h4>
-              <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
+              <h4 className="font-semibold text-zinc-100 text-sm leading-snug">{selectedNode.label}</h4>
+              <p className="text-zinc-400 text-xs mt-1.5 leading-relaxed">
                 {selectedNode.details || 'Relational entity indexed in project knowledge graph.'}
               </p>
             </div>
@@ -227,8 +240,9 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ projectId }) => 
                   y1={src.y}
                   x2={tgt.x}
                   y2={tgt.y}
-                  stroke="#374151"
+                  stroke="#334155"
                   strokeWidth="1.2"
+                  strokeOpacity="0.7"
                   strokeDasharray={edge.relationship.includes('gap') ? '3 3' : undefined}
                 />
               );
@@ -259,10 +273,10 @@ export const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({ projectId }) => 
                   <text
                     y={radius + 12}
                     textAnchor="middle"
-                    fill="#9ca3af"
+                    fill="#94a3b8"
                     fontSize="9px"
                     fontFamily="monospace"
-                    className="select-none pointer-events-none"
+                    className="select-none pointer-events-none font-medium"
                   >
                     {node.label.substring(0, 18)}
                   </text>

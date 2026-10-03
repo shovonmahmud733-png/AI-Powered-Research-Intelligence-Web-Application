@@ -20,10 +20,15 @@ import {
   Code2,
   HelpCircle,
   TrendingUp,
+  LayoutDashboard,
+  Activity,
+  Layers,
+  X,
 } from 'lucide-react';
 
-export type WorkflowStage = 'discover' | 'understand' | 'investigate' | 'build' | 'write';
+export type WorkflowStage = 'overview' | 'discover' | 'understand' | 'investigate' | 'build' | 'write';
 export type SubView =
+  | 'overview'
   | 'chat'
   | 'search'
   | 'feed'
@@ -59,8 +64,7 @@ interface SidebarItem {
 interface SidebarSection {
   stage: WorkflowStage;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  description: string;
+  description?: string;
   items: SidebarItem[];
 }
 
@@ -76,6 +80,8 @@ interface SidebarProps {
     noteCount: number;
   };
   aiAssistanceEnabled?: boolean;
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -84,17 +90,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectSubView,
   stats,
   aiAssistanceEnabled = true,
+  isOpenMobile = false,
+  onCloseMobile,
 }) => {
   const sections: SidebarSection[] = [
     {
-      stage: 'understand' as WorkflowStage,
-      label: 'Research AI',
-      icon: Sparkles,
-      description: 'Persistent Project-Aware Research Partner',
+      stage: 'overview',
+      label: 'Workspace',
       items: [
         {
-          id: 'chat' as SubView,
-          label: '🤖 Research AI',
+          id: 'overview',
+          label: 'Command Center',
+          icon: LayoutDashboard,
+        },
+        {
+          id: 'chat',
+          label: 'Research AI Copilot',
           icon: Sparkles,
           highlight: true,
           statusBadge: aiAssistanceEnabled ? 'Active' : 'Muted',
@@ -102,74 +113,80 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      stage: 'discover' as WorkflowStage,
-      label: 'Discover',
-      icon: Compass,
-      description: 'Scholarly discovery & feed',
+      stage: 'discover',
+      label: 'Phase 1 · Discover',
       items: [
-        { id: 'search' as SubView, label: 'Academic Search', icon: Search },
-        { id: 'feed' as SubView, label: 'Research Feed', icon: Compass },
-        { id: 'trends' as SubView, label: 'Scholarly Trends', icon: TrendingUp },
+        { id: 'search', label: 'Academic Search', icon: Search },
+        { id: 'feed', label: 'Research Feed', icon: Compass },
+        { id: 'trends', label: 'Scholarly Trends', icon: TrendingUp },
       ],
     },
     {
-      stage: 'understand' as WorkflowStage,
-      label: 'Understand',
-      icon: BookOpen,
-      description: 'Full-text extraction & RAG',
+      stage: 'understand',
+      label: 'Phase 2 · Understand',
       items: [
-        { id: 'papers' as SubView, label: 'Paper Library', icon: BookOpen, badge: stats?.paperCount },
-        { id: 'analysis' as SubView, label: 'Structured Analysis', icon: Sparkles },
-        { id: 'reproducibility' as SubView, label: 'Reproducibility & Methods', icon: ShieldCheck },
+        { id: 'papers', label: 'Paper Library', icon: BookOpen, badge: stats?.paperCount },
+        { id: 'analysis', label: 'Structured Analysis', icon: Layers },
+        { id: 'reproducibility', label: 'Methods & Reproducibility', icon: ShieldCheck },
       ],
     },
     {
-      stage: 'investigate' as WorkflowStage,
-      label: 'Investigate',
-      icon: ShieldCheck,
-      description: 'Evidence & scientific rigor',
+      stage: 'investigate',
+      label: 'Phase 3 · Investigate',
       items: [
-        { id: 'evidence' as SubView, label: 'Evidence Engine', icon: BookmarkCheck, badge: stats?.evidenceCount },
-        { id: 'claim_verifier' as SubView, label: 'Claim Verifier', icon: ShieldCheck },
-        { id: 'contradictions' as SubView, label: 'Contradiction Detector', icon: AlertTriangle },
-        { id: 'gaps' as SubView, label: 'Research Gaps', icon: Lightbulb, badge: stats?.gapCount },
-        { id: 'knowledge_graph' as SubView, label: 'Knowledge Graph', icon: Network },
+        { id: 'evidence', label: 'Evidence Engine', icon: BookmarkCheck, badge: stats?.evidenceCount },
+        { id: 'claim_verifier', label: 'Claim Verifier', icon: ShieldCheck },
+        { id: 'contradictions', label: 'Contradiction Detector', icon: AlertTriangle },
+        { id: 'gaps', label: 'Research Gaps', icon: Lightbulb, badge: stats?.gapCount },
+        { id: 'knowledge_graph', label: 'Knowledge Graph', icon: Network },
       ],
     },
     {
-      stage: 'build' as WorkflowStage,
-      label: 'Build',
-      icon: Table,
-      description: 'Synthesis, matrix & code',
+      stage: 'build',
+      label: 'Phase 4 · Build',
       items: [
-        { id: 'matrix' as SubView, label: 'Literature Matrix', icon: Table },
-        { id: 'comparison' as SubView, label: 'Paper Comparison', icon: GitCompare },
-        { id: 'experiments' as SubView, label: 'Experiment Tracker', icon: Cpu, badge: stats?.experimentCount },
-        { id: 'paper_to_code' as SubView, label: 'Paper-to-Code', icon: Code2 },
+        { id: 'matrix', label: 'Literature Matrix', icon: Table },
+        { id: 'comparison', label: 'Paper Comparison', icon: GitCompare },
+        { id: 'experiments', label: 'Experiment Tracker', icon: Cpu, badge: stats?.experimentCount },
+        { id: 'paper_to_code', label: 'Paper-to-Code', icon: Code2 },
       ],
     },
     {
-      stage: 'write' as WorkflowStage,
-      label: 'Write',
-      icon: FileEdit,
-      description: 'Evidence writing & citations',
+      stage: 'write',
+      label: 'Phase 5 · Synthesize',
       items: [
-        { id: 'notes' as SubView, label: 'Research Notes', icon: FileText, badge: stats?.noteCount },
-        { id: 'citations' as SubView, label: 'Citation Intelligence', icon: BookmarkCheck },
-        { id: 'missing_citations' as SubView, label: 'Missing Citations', icon: AlertTriangle },
-        { id: 'systematic_review' as SubView, label: 'Systematic Review (PRISMA)', icon: ClipboardList },
-        { id: 'human_tools' as SubView, label: 'Human-First Research Tools', icon: HelpCircle },
+        { id: 'notes', label: 'Research Notes', icon: FileText, badge: stats?.noteCount },
+        { id: 'citations', label: 'Citation Manager', icon: BookmarkCheck },
+        { id: 'missing_citations', label: 'Missing Citations', icon: AlertTriangle },
+        { id: 'systematic_review', label: 'Systematic Review (PRISMA)', icon: ClipboardList },
+        { id: 'human_tools', label: 'Human-First Tools', icon: HelpCircle },
       ],
     },
   ];
 
-  return (
-    <aside className="w-64 border-r border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 flex flex-col h-[calc(100vh-4rem)] overflow-y-auto">
-      <div className="p-3 space-y-6">
+  const sidebarContent = (
+    <aside className="w-64 border-r border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-[#0c101a] flex flex-col h-full overflow-hidden transition-colors">
+      {/* Mobile Header if drawer is open */}
+      <div className="lg:hidden flex items-center justify-between p-3 border-b border-zinc-200 dark:border-zinc-800">
+        <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider font-mono">
+          Research Navigation
+        </span>
+        {onCloseMobile && (
+          <button
+            onClick={onCloseMobile}
+            className="p-1 rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Navigation Sections */}
+      <div className="flex-1 overflow-y-auto p-2.5 space-y-4">
         {sections.map((sec) => (
-          <div key={sec.stage} className="space-y-1">
-            <div className="px-3 py-1 text-[11px] font-semibold tracking-wider text-zinc-400 dark:text-zinc-500 uppercase flex items-center justify-between">
-              <span>{sec.label}</span>
+          <div key={sec.label} className="space-y-0.5">
+            <div className="px-2.5 py-1 text-[10px] font-semibold tracking-wider text-zinc-400 dark:text-zinc-500 uppercase font-mono">
+              {sec.label}
             </div>
 
             <div className="space-y-0.5">
@@ -179,42 +196,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => onSelectSubView(sec.stage, item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+                    onClick={() => {
+                      onSelectSubView(sec.stage, item.id);
+                      if (onCloseMobile) onCloseMobile();
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-all text-left group ${
                       isActive
-                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 shadow-sm'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-900'
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 font-semibold shadow-2xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/60 dark:hover:bg-zinc-900/80 font-medium'
                     }`}
                   >
                     <div className="flex items-center space-x-2.5 truncate">
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white dark:text-zinc-950' : 'text-zinc-400 dark:text-zinc-500'}`} />
+                      <Icon
+                        className={`w-4 h-4 shrink-0 transition-colors ${
+                          isActive
+                            ? 'text-white dark:text-zinc-950'
+                            : 'text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300'
+                        }`}
+                      />
                       <span className="truncate">{item.label}</span>
                     </div>
 
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span
-                        className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                          isActive
-                            ? 'bg-zinc-700 text-zinc-200 dark:bg-zinc-300 dark:text-zinc-800'
-                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
+                    <div className="flex items-center space-x-1 shrink-0 ml-2">
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span
+                          className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                            isActive
+                              ? 'bg-zinc-800 text-zinc-200 dark:bg-zinc-200 dark:text-zinc-800'
+                              : 'bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
 
-                    {item.statusBadge && (
-                      <span
-                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full uppercase tracking-wider flex items-center space-x-1 ${
-                          aiAssistanceEnabled
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                            : 'bg-zinc-200 dark:bg-zinc-800 text-zinc-500'
-                        }`}
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${aiAssistanceEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'}`} />
-                        <span>{item.statusBadge}</span>
-                      </span>
-                    )}
+                      {item.statusBadge && (
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded-full uppercase tracking-wider flex items-center space-x-1 ${
+                            aiAssistanceEnabled
+                              ? isActive
+                                ? 'bg-emerald-500/20 text-emerald-300 dark:text-emerald-800'
+                                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              : 'bg-zinc-200/60 dark:bg-zinc-800 text-zinc-500'
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              aiAssistanceEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'
+                            }`}
+                          />
+                          <span>{item.statusBadge}</span>
+                        </span>
+                      )}
+                    </div>
                   </button>
                 );
               })}
@@ -224,13 +258,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Footer System Status */}
-      <div className="mt-auto p-3 border-t border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono flex items-center justify-between">
-        <span className="flex items-center space-x-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+      <div className="p-2.5 border-t border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-100/40 dark:bg-zinc-900/40 text-[10px] text-zinc-500 dark:text-zinc-400 font-mono flex items-center justify-between shrink-0">
+        <div className="flex items-center space-x-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>Local Engine Active</span>
-        </span>
-        <span>v1.0-prod</span>
+        </div>
+        <div className="text-zinc-400 dark:text-zinc-500">v1.2-prod</div>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <div className="hidden lg:block h-[calc(100vh-4rem)] shrink-0">{sidebarContent}</div>
+
+      {/* Mobile Drawer */}
+      {isOpenMobile && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+            onClick={onCloseMobile}
+          />
+          <div className="relative z-10 h-full">{sidebarContent}</div>
+        </div>
+      )}
+    </>
   );
 };

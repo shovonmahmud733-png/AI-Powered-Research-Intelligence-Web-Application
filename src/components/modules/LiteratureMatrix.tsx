@@ -115,31 +115,31 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
   return (
     <div className="space-y-4">
       {/* Header and Controls */}
-      <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white dark:bg-[#0f1422] p-4 sm:p-5 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
-            <Table className="w-4 h-4 text-zinc-500" />
-            <span>Literature Matrix & Synthesis Grid</span>
+          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
+            <Table className="w-4 h-4 text-blue-500" />
+            <span>Literature Matrix & Systematic Synthesis Grid</span>
           </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
             Normalized comparative tabular representation. Edit extracted cells inline to maintain researcher oversight.
           </p>
         </div>
 
         <div className="flex items-center space-x-2">
           {/* Add custom column input */}
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-1.5">
             <input
               type="text"
               value={newColumnName}
               onChange={(e) => setNewColumnName(e.target.value)}
-              placeholder="New column name..."
-              className="text-xs bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md px-2 py-1 text-zinc-800 dark:text-zinc-200 max-w-[150px]"
+              placeholder="New dimension..."
+              className="text-xs bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-xl px-2.5 py-1.5 text-zinc-800 dark:text-zinc-200 max-w-[140px] focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <button
               onClick={handleAddCustomColumn}
-              className="p-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md text-xs"
-              title="Add Custom Column"
+              className="p-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl text-xs transition-colors"
+              title="Add Custom Dimension"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -147,7 +147,7 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
 
           <button
             onClick={exportCSV}
-            className="inline-flex items-center space-x-1 px-3 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-md text-xs font-medium hover:bg-zinc-800 transition-colors"
+            className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-xl text-xs font-semibold hover:bg-zinc-800 transition-colors shadow-2xs"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
@@ -156,25 +156,25 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
       </div>
 
       {/* Matrix Table */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-x-auto shadow-xs">
+      <div className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl overflow-x-auto shadow-2xs">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="bg-zinc-50 dark:bg-zinc-950/80 border-b border-zinc-200 dark:border-zinc-800 text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">
-              <th className="p-3 min-w-[200px]">Paper</th>
-              <th className="p-3 w-16">Year</th>
-              <th className="p-3 min-w-[140px]">Dataset</th>
-              <th className="p-3 min-w-[140px]">Model</th>
-              <th className="p-3 min-w-[110px]">Language</th>
-              <th className="p-3 min-w-[140px]">Method</th>
-              <th className="p-3 min-w-[110px]">Metric</th>
-              <th className="p-3 min-w-[160px]">Result</th>
-              <th className="p-3 min-w-[180px]">Limitation</th>
+            <tr className="bg-zinc-50/80 dark:bg-zinc-900/60 border-b border-zinc-200/80 dark:border-zinc-800 text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              <th className="p-3.5 min-w-[200px]">Paper</th>
+              <th className="p-3.5 w-16">Year</th>
+              <th className="p-3.5 min-w-[140px]">Dataset</th>
+              <th className="p-3.5 min-w-[140px]">Model</th>
+              <th className="p-3.5 min-w-[110px]">Language</th>
+              <th className="p-3.5 min-w-[140px]">Method</th>
+              <th className="p-3.5 min-w-[110px]">Metric</th>
+              <th className="p-3.5 min-w-[160px]">Result</th>
+              <th className="p-3.5 min-w-[180px]">Limitation</th>
               {customColumns.map((col) => (
-                <th key={col} className="p-3 min-w-[140px] text-purple-600 dark:text-purple-400 font-mono">
+                <th key={col} className="p-3.5 min-w-[140px] text-purple-600 dark:text-purple-400 font-mono">
                   {col}
                 </th>
               ))}
-              <th className="p-3 w-20 text-center">Actions</th>
+              <th className="p-3.5 w-20 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
@@ -182,34 +182,34 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
               const isEditing = editingRowId === row.id;
 
               return (
-                <tr key={row.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/50">
-                  <td className="p-3 font-medium text-zinc-900 dark:text-zinc-100 max-w-xs">
+                <tr key={row.id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-900/40 transition-colors">
+                  <td className="p-3.5 font-semibold text-zinc-900 dark:text-zinc-100 max-w-xs">
                     {row.paperTitle}
                   </td>
-                  <td className="p-3 font-mono text-zinc-500">{row.year}</td>
+                  <td className="p-3.5 font-mono text-zinc-500">{row.year}</td>
 
                   {/* Dataset */}
-                  <td className="p-3">
+                  <td className="p-3.5">
                     {isEditing ? (
                       <input
                         type="text"
                         value={editingValues.dataset || ''}
                         onChange={(e) => setEditingValues({ ...editingValues, dataset: e.target.value })}
-                        className="w-full p-1 border rounded text-xs bg-zinc-50 dark:bg-zinc-950"
+                        className="w-full p-1.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     ) : (
-                      <span className="text-zinc-700 dark:text-zinc-300">{row.dataset}</span>
+                      <span className="text-zinc-700 dark:text-zinc-300 font-medium">{row.dataset}</span>
                     )}
                   </td>
 
                   {/* Model */}
-                  <td className="p-3">
+                  <td className="p-3.5">
                     {isEditing ? (
                       <input
                         type="text"
                         value={editingValues.model || ''}
                         onChange={(e) => setEditingValues({ ...editingValues, model: e.target.value })}
-                        className="w-full p-1 border rounded text-xs bg-zinc-50 dark:bg-zinc-950"
+                        className="w-full p-1.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     ) : (
                       <span className="font-mono text-zinc-700 dark:text-zinc-300">{row.model}</span>
@@ -217,13 +217,13 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
                   </td>
 
                   {/* Language */}
-                  <td className="p-3">
+                  <td className="p-3.5">
                     {isEditing ? (
                       <input
                         type="text"
                         value={editingValues.language || ''}
                         onChange={(e) => setEditingValues({ ...editingValues, language: e.target.value })}
-                        className="w-full p-1 border rounded text-xs bg-zinc-50 dark:bg-zinc-950"
+                        className="w-full p-1.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     ) : (
                       <span className="text-zinc-600 dark:text-zinc-400">{row.language}</span>
@@ -231,13 +231,13 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
                   </td>
 
                   {/* Method */}
-                  <td className="p-3">
+                  <td className="p-3.5">
                     {isEditing ? (
                       <input
                         type="text"
                         value={editingValues.method || ''}
                         onChange={(e) => setEditingValues({ ...editingValues, method: e.target.value })}
-                        className="w-full p-1 border rounded text-xs bg-zinc-50 dark:bg-zinc-950"
+                        className="w-full p-1.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     ) : (
                       <span className="text-zinc-700 dark:text-zinc-300">{row.method}</span>
@@ -245,13 +245,13 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
                   </td>
 
                   {/* Metric */}
-                  <td className="p-3">
+                  <td className="p-3.5">
                     {isEditing ? (
                       <input
                         type="text"
                         value={editingValues.metric || ''}
                         onChange={(e) => setEditingValues({ ...editingValues, metric: e.target.value })}
-                        className="w-full p-1 border rounded text-xs bg-zinc-50 dark:bg-zinc-950 font-mono"
+                        className="w-full p-1.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs bg-zinc-50 dark:bg-zinc-900 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     ) : (
                       <span className="font-mono text-zinc-600 dark:text-zinc-400">{row.metric}</span>
@@ -259,36 +259,36 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
                   </td>
 
                   {/* Result */}
-                  <td className="p-3">
+                  <td className="p-3.5">
                     {isEditing ? (
                       <input
                         type="text"
                         value={editingValues.result || ''}
                         onChange={(e) => setEditingValues({ ...editingValues, result: e.target.value })}
-                        className="w-full p-1 border rounded text-xs bg-zinc-50 dark:bg-zinc-950 font-medium"
+                        className="w-full p-1.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs bg-zinc-50 dark:bg-zinc-900 font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     ) : (
-                      <span className="font-medium text-emerald-700 dark:text-emerald-400">{row.result}</span>
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-400 font-mono">{row.result}</span>
                     )}
                   </td>
 
                   {/* Limitation */}
-                  <td className="p-3">
+                  <td className="p-3.5">
                     {isEditing ? (
                       <input
                         type="text"
                         value={editingValues.limitation || ''}
                         onChange={(e) => setEditingValues({ ...editingValues, limitation: e.target.value })}
-                        className="w-full p-1 border rounded text-xs bg-zinc-50 dark:bg-zinc-950 text-amber-700"
+                        className="w-full p-1.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs bg-zinc-50 dark:bg-zinc-900 text-amber-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     ) : (
-                      <span className="text-zinc-500 italic">{row.limitation}</span>
+                      <span className="text-zinc-500 italic leading-relaxed">{row.limitation}</span>
                     )}
                   </td>
 
                   {/* Custom Columns */}
                   {customColumns.map((col) => (
-                    <td key={col} className="p-3">
+                    <td key={col} className="p-3.5">
                       {isEditing ? (
                         <input
                           type="text"
@@ -302,7 +302,7 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
                               },
                             })
                           }
-                          className="w-full p-1 border rounded text-xs bg-zinc-50 dark:bg-zinc-950"
+                          className="w-full p-1.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs bg-zinc-50 dark:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       ) : (
                         <span className="text-zinc-700 dark:text-zinc-300">
@@ -313,19 +313,19 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
                   ))}
 
                   {/* Row Actions */}
-                  <td className="p-3 text-center">
+                  <td className="p-3.5 text-center">
                     {isEditing ? (
-                      <div className="flex items-center justify-center space-x-1">
+                      <div className="flex items-center justify-center space-x-1.5">
                         <button
                           onClick={handleSaveEdit}
-                          className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
                           title="Save Changes"
                         >
                           <Check className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setEditingRowId(null)}
-                          className="p-1 text-zinc-400 hover:bg-zinc-100 rounded"
+                          className="p-1.5 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
                           title="Cancel"
                         >
                           <X className="w-4 h-4" />
@@ -334,8 +334,8 @@ export const LiteratureMatrix: React.FC<LiteratureMatrixProps> = ({ projectId })
                     ) : (
                       <button
                         onClick={() => handleStartEdit(row)}
-                        className="p-1 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 rounded"
-                        title="Edit Values"
+                        className="p-1.5 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-lg transition-colors"
+                        title="Edit Row"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>

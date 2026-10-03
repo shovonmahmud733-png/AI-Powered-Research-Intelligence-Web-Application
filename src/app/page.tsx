@@ -7,6 +7,7 @@ import { Sidebar, WorkflowStage, SubView } from '@/components/layout/Sidebar';
 import { NewProjectModal } from '@/components/layout/NewProjectModal';
 
 // Workflow Modules
+import { ResearchDashboardOverview } from '@/components/modules/ResearchDashboardOverview';
 import { AcademicSearch } from '@/components/modules/AcademicSearch';
 import { PaperLibrary } from '@/components/modules/PaperLibrary';
 import { StructuredAnalysisView } from '@/components/modules/StructuredAnalysisView';
@@ -36,13 +37,14 @@ export default function ResearchWorkspacePage() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Workflow navigation state
-  const [stage, setStage] = useState<WorkflowStage>('discover');
-  const [subView, setSubView] = useState<SubView>('search');
+  // Workflow navigation state - Defaults to Executive Command Center
+  const [stage, setStage] = useState<WorkflowStage>('overview');
+  const [subView, setSubView] = useState<SubView>('overview');
   const [selectedAnalysisPaperId, setSelectedAnalysisPaperId] = useState<string | undefined>(undefined);
   const [selectedChatPaperId, setSelectedChatPaperId] = useState<string | undefined>(undefined);
   const [aiAssistanceEnabled, setAiAssistanceEnabled] = useState<boolean>(true);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Stats
   const [projectStats, setProjectStats] = useState<any>(null);
@@ -149,6 +151,16 @@ export default function ResearchWorkspacePage() {
     setSubView('analysis');
   };
 
+  const handleNavigate = (newStage: WorkflowStage, newSubView: SubView, paperId?: string) => {
+    if (paperId) {
+      setSelectedAnalysisPaperId(paperId);
+      setSelectedChatPaperId(paperId);
+    }
+    setStage(newStage);
+    setSubView(newSubView);
+    setIsMobileMenuOpen(false);
+  };
+
   const refreshData = () => {
     if (currentProject?.id) {
       fetchPapers(currentProject.id);
@@ -157,7 +169,7 @@ export default function ResearchWorkspacePage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-100/60 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col font-sans antialiased">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#090d16] text-zinc-900 dark:text-zinc-100 flex flex-col font-sans antialiased transition-colors">
       {/* Top Header */}
       <Header
         currentProject={currentProject}
@@ -171,6 +183,12 @@ export default function ResearchWorkspacePage() {
           setStage('understand');
           setSubView('chat');
         }}
+        onOpenSearch={() => {
+          setStage('discover');
+          setSubView('search');
+        }}
+        isMobileMenuOpen={isMobileMenuOpen}
+        onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -184,27 +202,49 @@ export default function ResearchWorkspacePage() {
           }}
           stats={projectStats}
           aiAssistanceEnabled={aiAssistanceEnabled}
+          isOpenMobile={isMobileMenuOpen}
+          onCloseMobile={() => setIsMobileMenuOpen(false)}
         />
 
         {/* Main Work Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto space-y-6">
-            {/* Breadcrumb / Research Phase Banner */}
-            <div className="flex items-center justify-between text-xs text-zinc-500 font-mono border-b border-zinc-200/80 dark:border-zinc-800 pb-2">
-              <div className="flex items-center space-x-1.5 uppercase tracking-wider">
-                <span className="font-semibold text-zinc-800 dark:text-zinc-200">{stage}</span>
-                <span>/</span>
-                <span className="text-zinc-600 dark:text-zinc-400">{subView.replace(/_/g, ' ')}</span>
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* Breadcrumb / Research Phase Header */}
+            <div className="flex items-center justify-between text-xs text-zinc-500 font-mono border-b border-zinc-200/80 dark:border-zinc-800/80 pb-2.5">
+              <div className="flex items-center space-x-1.5 uppercase tracking-wider text-[11px]">
+                <span className="font-bold text-zinc-900 dark:text-zinc-200">{stage}</span>
+                <span className="text-zinc-300 dark:text-zinc-600">/</span>
+                <span className="text-zinc-600 dark:text-zinc-400 font-medium">
+                  {subView.replace(/_/g, ' ')}
+                </span>
               </div>
 
               {currentProject && (
-                <div className="text-[11px] text-zinc-500 hidden sm:block">
-                  Active Project: <span className="font-semibold text-zinc-800 dark:text-zinc-200">{currentProject.title}</span>
+                <div className="text-[11px] text-zinc-500 hidden sm:flex items-center space-x-2">
+                  <span>Project:</span>
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[280px]">
+                    {currentProject.title}
+                  </span>
                 </div>
               )}
             </div>
 
             {/* Workflow Stage Views */}
+
+            {/* OVERVIEW: Executive Research Command Center */}
+            {subView === 'overview' && (
+              <ResearchDashboardOverview
+                currentProject={currentProject}
+                projects={projects}
+                papers={papers}
+                stats={projectStats}
+                user={user}
+                aiAssistanceEnabled={aiAssistanceEnabled}
+                onNavigate={handleNavigate}
+                onOpenNewProject={() => setIsNewProjectModalOpen(true)}
+                onSelectProject={handleSelectProject}
+              />
+            )}
 
             {/* 0. DEDICATED PERSISTENT AI COPILOT */}
             {subView === 'chat' && currentProject && (

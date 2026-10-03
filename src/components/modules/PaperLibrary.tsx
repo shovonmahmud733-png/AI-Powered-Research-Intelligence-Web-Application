@@ -158,21 +158,21 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
   return (
     <div className="space-y-6">
       {/* Header and Upload Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0f1422] p-4 sm:p-5 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs">
         <div>
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
-            <BookOpen className="w-4 h-4 text-zinc-500" />
-            <span>Project Paper Database ({papers.length} Publications)</span>
+          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
+            <BookOpen className="w-4 h-4 text-blue-500" />
+            <span>Project Literature Library ({papers.length} Publications)</span>
           </h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            Normalized paper catalog with verified DOIs, section extraction, and evidence grounding.
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+            Structured full-text catalog with verified DOIs, section extraction, and vector-indexed evidence.
           </p>
         </div>
 
         <div>
           <button
             onClick={() => setIsUploading(true)}
-            className="inline-flex items-center space-x-1.5 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-zinc-200 dark:text-zinc-950 text-xs font-medium rounded-lg shadow-xs transition-colors"
+            className="inline-flex items-center space-x-2 px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 text-xs font-semibold rounded-xl shadow-xs hover:shadow-sm transition-all"
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Upload Research PDF</span>
@@ -182,17 +182,21 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
 
       {/* Empty State */}
       {papers.length === 0 && (
-        <div className="text-center py-16 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/30 space-y-3">
-          <BookOpen className="w-8 h-8 mx-auto text-zinc-400" />
-          <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-            No papers in this project yet
-          </h3>
-          <p className="text-xs text-zinc-500 max-w-sm mx-auto">
-            Search for academic literature using the Discover workflow, or upload a research PDF manuscript to extract structured evidence.
-          </p>
+        <div className="text-center py-16 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white/50 dark:bg-[#0f1422]/40 space-y-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center mx-auto text-zinc-400 shadow-2xs">
+            <BookOpen className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
+              No papers cataloged in this project yet
+            </h3>
+            <p className="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed">
+              Discover and add academic literature using the Academic Search engine, or upload a research PDF manuscript to extract structured sections.
+            </p>
+          </div>
           <button
             onClick={() => setIsUploading(true)}
-            className="px-3.5 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-medium rounded-md"
+            className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold rounded-xl shadow-xs"
           >
             Upload your first PDF
           </button>
@@ -200,20 +204,20 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
       )}
 
       {/* Papers Grid */}
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-3.5">
         {papers.map((paper) => (
           <div
             key={paper.id}
-            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs space-y-3 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+            className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center space-x-2">
                 {paper.isDemo ? (
-                  <span className="text-[10px] font-mono uppercase bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 font-bold">
-                    DEMO PAPER — NOT A REAL PUBLICATION
+                  <span className="text-[10px] font-mono uppercase bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/60 font-bold">
+                    SAMPLE PAPER
                   </span>
                 ) : (
-                  <span className="text-[10px] font-mono uppercase bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-mono uppercase bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-2 py-0.5 rounded-md font-medium">
                     {paper.sourceProvider}
                   </span>
                 )}
@@ -221,19 +225,19 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                 {paper.metadataStatus === 'verified' && (
                   <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center space-x-1">
                     <CheckCircle className="w-3 h-3" />
-                    <span>Metadata Verified</span>
+                    <span>Verified Metadata</span>
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center space-x-2 text-xs">
+              <div className="flex items-center space-x-1.5 text-xs">
                 {onOpenCopilotForPaper && (
                   <button
                     onClick={() => onOpenCopilotForPaper(paper.id)}
-                    className="inline-flex items-center space-x-1 px-2.5 py-1 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-md border border-amber-200 dark:border-amber-800 transition-colors font-medium"
+                    className="inline-flex items-center space-x-1 px-2.5 py-1 text-amber-800 dark:text-amber-300 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 rounded-lg border border-amber-200 dark:border-amber-800/60 transition-colors font-semibold text-[11px]"
                     title="Open paper in persistent Research Copilot with multi-turn chat"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                     <span>Ask Copilot</span>
                   </button>
                 )}
@@ -243,7 +247,7 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                     setActiveAskPaper(paper);
                     setChatHistory([]);
                   }}
-                  className="inline-flex items-center space-x-1 px-2.5 py-1 text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                  className="inline-flex items-center space-x-1 px-2.5 py-1 text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors font-medium text-[11px]"
                   title="Quick single-paper RAG inspector"
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-zinc-500" />
@@ -252,7 +256,7 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
 
                 <button
                   onClick={() => onSelectPaperForAnalysis(paper.id)}
-                  className="inline-flex items-center space-x-1 px-2.5 py-1 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-md hover:bg-zinc-800 transition-colors font-medium"
+                  className="inline-flex items-center space-x-1 px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 rounded-lg transition-colors font-semibold text-[11px] shadow-2xs"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Structured Analysis</span>
@@ -260,7 +264,7 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
 
                 <button
                   onClick={() => handleDeletePaper(paper.id)}
-                  className="p-1 text-zinc-400 hover:text-red-600 rounded"
+                  className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-lg transition-colors"
                   title="Remove Paper"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -269,11 +273,11 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
             </div>
 
             <div>
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
                 {paper.title}
               </h3>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                {paper.authors.join(', ')} · <span className="italic">{paper.journalOrConference}</span> ({paper.publicationYear})
+                {paper.authors.join(', ')} · <span className="italic">{paper.journalOrConference || 'Publication'}</span> ({paper.publicationYear})
               </p>
               {paper.doi && (
                 <p className="text-[11px] font-mono text-zinc-500 mt-0.5">
@@ -282,33 +286,35 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
               )}
             </div>
 
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
-              {paper.abstract}
-            </p>
+            {paper.abstract && (
+              <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+                {paper.abstract}
+              </p>
+            )}
           </div>
         ))}
       </div>
 
       {/* PDF Upload Modal */}
       {isUploading && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl max-w-md w-full p-5 border border-zinc-200 dark:border-zinc-800 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
-                <FileUp className="w-4 h-4 text-zinc-500" />
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0f1422] rounded-2xl max-w-md w-full p-6 border border-zinc-200/90 dark:border-zinc-800/80 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800/80">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
+                <FileUp className="w-4 h-4 text-blue-500" />
                 <span>Upload & Index Research PDF</span>
               </h3>
               <button
                 onClick={() => setIsUploading(false)}
-                className="text-zinc-400 hover:text-zinc-600"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 rounded-md"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleUploadSubmit} className="space-y-3">
+            <form onSubmit={handleUploadSubmit} className="space-y-3.5">
               <div>
-                <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block mb-1">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
                   Select Academic PDF (Max 25MB)
                 </label>
                 <input
@@ -324,12 +330,12 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                       }
                     }
                   }}
-                  className="w-full text-xs text-zinc-500 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-zinc-100 file:text-zinc-700 dark:file:bg-zinc-800 dark:file:text-zinc-300 hover:file:cursor-pointer"
+                  className="w-full text-xs text-zinc-500 file:mr-3 file:py-2.5 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-zinc-100 file:text-zinc-800 dark:file:bg-zinc-800 dark:file:text-zinc-200 hover:file:cursor-pointer border border-zinc-200 dark:border-zinc-800 rounded-xl p-2"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block mb-1">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 block mb-1.5">
                   Paper Title (Optional override)
                 </label>
                 <input
@@ -337,25 +343,25 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                   value={uploadTitle}
                   onChange={(e) => setUploadTitle(e.target.value)}
                   placeholder="Extracted title from PDF..."
-                  className="w-full text-xs bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-md p-2"
+                  className="w-full text-xs bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-xl p-2.5 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="p-2.5 bg-zinc-50 dark:bg-zinc-950 rounded-md border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-500 space-y-1 font-mono">
-                <div>Extraction Pipeline:</div>
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-900/60 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 text-[11px] text-zinc-500 space-y-1 font-mono">
+                <div className="font-semibold text-zinc-700 dark:text-zinc-300">Extraction Pipeline:</div>
                 <div className="text-[10px] text-zinc-400">
                   Validation → Page-Aware Text Extraction → Section Detection → Paragraph Chunking → Vector Embeddings
                 </div>
               </div>
 
               {uploadProgress && (
-                <div className="p-2 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded text-xs text-emerald-800 dark:text-emerald-300">
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 font-medium">
                   {uploadProgress}
                 </div>
               )}
 
               {uploadError && (
-                <div className="p-2 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded text-xs text-red-800 dark:text-red-300">
+                <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs text-red-800 dark:text-red-300 font-medium">
                   {uploadError}
                 </div>
               )}
@@ -364,14 +370,14 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsUploading(false)}
-                  className="px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-100 rounded-md"
+                  className="px-3.5 py-2 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!uploadFile}
-                  className="px-4 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-medium rounded-md hover:bg-zinc-800 disabled:opacity-50"
+                  className="px-4 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs font-semibold rounded-xl hover:bg-zinc-800 disabled:opacity-50 shadow-xs"
                 >
                   Process & Index
                 </button>
@@ -383,15 +389,15 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
 
       {/* Ask the Paper Modal (RAG Q&A with Strict Page & Section Citations) */}
       {activeAskPaper && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-xl max-w-2xl w-full h-[80vh] flex flex-col border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0f1422] rounded-2xl max-w-2xl w-full h-[80vh] flex flex-col border border-zinc-200/90 dark:border-zinc-800/80 shadow-2xl overflow-hidden">
             {/* Modal Header */}
-            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-950">
+            <div className="p-4 sm:p-5 border-b border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-between bg-zinc-50/70 dark:bg-zinc-900/60">
               <div className="truncate pr-4">
-                <span className="text-[10px] font-mono uppercase bg-zinc-200 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-600 dark:text-zinc-400">
+                <span className="text-[10px] font-mono uppercase bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md font-semibold">
                   Grounded Evidence Q&A
                 </span>
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate mt-1">
+                <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate mt-1">
                   Ask: {activeAskPaper.title}
                 </h3>
               </div>
@@ -403,28 +409,30 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                       setActiveAskPaper(null);
                       onOpenCopilotForPaper(paperId);
                     }}
-                    className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded-md hover:bg-amber-100"
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 rounded-xl font-semibold transition-colors"
                     title="Transfer context to full persistent AI chat session"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Open in Full Copilot</span>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Open in Copilot</span>
                   </button>
                 )}
                 <button
                   onClick={() => setActiveAskPaper(null)}
-                  className="text-zinc-400 hover:text-zinc-600 p-1"
+                  className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1.5 rounded-lg"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
             {/* Conversation Flow */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
               {chatHistory.length === 0 && (
-                <div className="text-center py-12 space-y-3">
-                  <MessageSquare className="w-8 h-8 mx-auto text-zinc-400" />
-                  <p className="text-xs text-zinc-500 max-w-md mx-auto">
+                <div className="text-center py-12 space-y-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center mx-auto text-zinc-400 shadow-2xs">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs text-zinc-500 max-w-md mx-auto leading-relaxed">
                     Inquire about specific methodology, datasets, models, metrics, or limitations. Every answer shows verified source page and section evidence.
                   </p>
                   <div className="flex flex-wrap justify-center gap-1.5 pt-2">
@@ -439,7 +447,7 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                         onClick={() => {
                           setQuestion(sampleQ);
                         }}
-                        className="text-[11px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 px-2.5 py-1 rounded-full text-left"
+                        className="text-[11px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 px-3 py-1 rounded-full text-left font-medium transition-colors"
                       >
                         {sampleQ}
                       </button>
@@ -452,29 +460,29 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                 <div key={idx} className="space-y-2">
                   {/* User query */}
                   <div className="flex justify-end">
-                    <div className="bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs px-3 py-2 rounded-xl rounded-tr-xs max-w-[85%]">
+                    <div className="bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 text-xs px-3.5 py-2.5 rounded-2xl rounded-tr-xs max-w-[85%] font-medium">
                       {msg.question}
                     </div>
                   </div>
 
                   {/* AI Grounded Response */}
                   <div className="flex justify-start">
-                    <div className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl rounded-tl-xs p-3.5 max-w-[90%] space-y-3">
+                    <div className="bg-zinc-50/80 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl rounded-tl-xs p-4 max-w-[90%] space-y-3">
                       <div className="text-xs text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed">
                         {msg.answer}
                       </div>
 
                       {/* Evidence citations */}
                       {msg.evidence && msg.evidence.length > 0 && (
-                        <div className="border-t border-zinc-200 dark:border-zinc-800 pt-2.5 space-y-1.5">
-                          <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center space-x-1">
+                        <div className="border-t border-zinc-200/70 dark:border-zinc-800 pt-2.5 space-y-2">
+                          <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider flex items-center space-x-1 font-mono">
                             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                             <span>Source Evidence (Grounding Verification)</span>
                           </div>
                           {msg.evidence.slice(0, 2).map((ev, evIdx) => (
                             <div
                               key={evIdx}
-                              className="p-2 bg-white dark:bg-zinc-900 rounded border border-zinc-200/70 dark:border-zinc-800 text-[11px] space-y-1"
+                              className="p-2.5 bg-white dark:bg-[#0c101a] rounded-xl border border-zinc-200/70 dark:border-zinc-800/80 text-[11px] space-y-1 shadow-2xs"
                             >
                               <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
                                 <span className="font-semibold text-zinc-800 dark:text-zinc-200">
@@ -496,7 +504,7 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
 
               {asking && (
                 <div className="text-xs text-zinc-500 font-mono animate-pulse flex items-center space-x-2">
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                   <span>Retrieving vector chunks and formulating grounded evidence answer...</span>
                 </div>
               )}
@@ -505,19 +513,19 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
             {/* Modal Input */}
             <form
               onSubmit={handleAskQuestion}
-              className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center space-x-2"
+              className="p-3 sm:p-3.5 border-t border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#0f1422] flex items-center space-x-2"
             >
               <input
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="Ask specific questions about this paper's findings, dataset, or methods..."
-                className="flex-1 text-xs bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                className="flex-1 text-xs bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <button
                 type="submit"
                 disabled={asking || !question.trim()}
-                className="px-3 py-2 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-lg text-xs font-medium hover:bg-zinc-800 disabled:opacity-50"
+                className="px-4 py-2.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 rounded-xl text-xs font-semibold hover:bg-zinc-800 disabled:opacity-50 transition-colors"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>
