@@ -393,6 +393,12 @@ export default function ResearchWorkspacePage() {
               <PaperLibrary
                 projectId={currentProject.id}
                 papers={papers}
+                selectedPaperId={selectedAnalysisPaperId || selectedChatPaperId}
+                aiAssistanceEnabled={aiAssistanceEnabled}
+                onSelectPaper={(pId) => {
+                  setSelectedAnalysisPaperId(pId);
+                  setSelectedChatPaperId(pId);
+                }}
                 onRefresh={refreshData}
                 onDeletePaper={handleDeletePaper}
                 onSelectPaperForAnalysis={handleSelectPaperForAnalysis}
@@ -407,10 +413,20 @@ export default function ResearchWorkspacePage() {
               <StructuredAnalysisView
                 papers={papers}
                 initialPaperId={selectedAnalysisPaperId}
+                aiAssistanceEnabled={aiAssistanceEnabled}
+                onToggleAiAssistance={() => setAiAssistanceEnabled((prev) => !prev)}
+                onSelectPaper={(pId) => {
+                  setSelectedAnalysisPaperId(pId);
+                  setSelectedChatPaperId(pId);
+                }}
                 onAskThisPaper={(pId) => {
                   setSelectedChatPaperId(pId);
                   setStage('understand');
                   setSubView('chat');
+                }}
+                onBackToLibrary={() => {
+                  setStage('understand');
+                  setSubView('papers');
                 }}
               />
             )}
