@@ -370,6 +370,8 @@ export default function ResearchWorkspacePage() {
             {subView === 'search' && (
               <AcademicSearch
                 projectId={currentProject?.id}
+                currentProject={currentProject}
+                existingPapers={papers}
                 onPaperAdded={refreshData}
               />
             )}
