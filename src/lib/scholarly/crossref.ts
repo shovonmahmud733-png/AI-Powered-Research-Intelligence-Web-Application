@@ -7,12 +7,16 @@ export class CrossrefProvider implements ScholarlyProvider {
   async search(params: ScholarlySearchParams): Promise<{ papers: SearchResultPaper[]; total: number }> {
     const limit = params.limit || 15;
     const offset = params.offset || 0;
-    const queryParts = [params.query];
-
-    if (params.author) queryParts.push(`query.author=${encodeURIComponent(params.author)}`);
-
     const url = new URL('https://api.crossref.org/works');
-    url.searchParams.set('query', params.query);
+    if (params.query) {
+      url.searchParams.set('query', params.query);
+    }
+    if (params.author) {
+      url.searchParams.set('query.author', params.author);
+    }
+    if (params.doi) {
+      url.searchParams.set('query.bibliographic', params.doi);
+    }
     url.searchParams.set('rows', String(limit));
     url.searchParams.set('offset', String(offset));
 
@@ -124,7 +128,21 @@ export class CrossrefProvider implements ScholarlyProvider {
         };
       });
 
-      return { papers, total };
+      let filteredPapers = papers;
+      if (params.author) {
+        const authorLower = params.author.toLowerCase().trim();
+        filteredPapers = filteredPapers.filter((p) =>
+          p.authors.some((a) => a.toLowerCase().includes(authorLower))
+        );
+      }
+      if (params.doi) {
+        const doiLower = params.doi.toLowerCase().trim();
+        filteredPapers = filteredPapers.filter((p) =>
+          p.doi?.toLowerCase().includes(doiLower)
+        );
+      }
+
+      return { papers: filteredPapers, total: filteredPapers.length > 0 ? total : 0 };
     } catch (err: any) {
       console.warn('Crossref API request failed or timed out:', err.message);
       return { papers: [], total: 0 };

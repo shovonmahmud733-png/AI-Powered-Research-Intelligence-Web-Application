@@ -55,7 +55,21 @@ export class ScholarlySearchService {
     const combined: SearchResultPaper[] = [];
 
     // Prioritize high-scoring live or curated papers
-    const all = [...curatedMatches, ...liveResult.papers];
+    let all = [...curatedMatches, ...liveResult.papers];
+    if (params.author) {
+      const aLower = params.author.toLowerCase().trim();
+      all = all.filter((p) => p.authors.some((a) => a.toLowerCase().includes(aLower)));
+    }
+    if (params.doi) {
+      const dLower = params.doi.toLowerCase().trim();
+      all = all.filter((p) => p.doi?.toLowerCase().includes(dLower));
+    }
+    if (params.year) {
+      all = all.filter((p) => p.publicationYear === params.year);
+    }
+    if (params.openAccessOnly) {
+      all = all.filter((p) => Boolean(p.openAccessUrl));
+    }
     all.sort((a, b) => b.relevance.score - a.relevance.score);
 
     for (const paper of all) {
