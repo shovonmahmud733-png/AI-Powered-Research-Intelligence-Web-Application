@@ -48,10 +48,12 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const success = db.deletePaper(id);
-  if (!success) {
-    return NextResponse.json({ error: 'Paper not found' }, { status: 404 });
+  try {
+    const { id } = await params;
+    const cleanId = decodeURIComponent(id).trim();
+    db.deletePaper(cleanId);
+    return NextResponse.json({ success: true, deletedId: cleanId });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
-  return NextResponse.json({ success: true });
 }

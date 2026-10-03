@@ -79,6 +79,18 @@ export default function ResearchWorkspacePage() {
 
   const fetchPapers = async (projectId: string) => {
     try {
+      let deletedIds = new Set<string>();
+      if (typeof window !== 'undefined') {
+        try {
+          const storedDeleted = localStorage.getItem('rp_deleted_papers');
+          if (storedDeleted) {
+            deletedIds = new Set(JSON.parse(storedDeleted));
+          }
+        } catch (e) {
+          console.warn('Deleted papers parse error:', e);
+        }
+      }
+
       const res = await fetch(`/api/papers?projectId=${projectId}`);
       let apiPapers: Paper[] = [];
       if (res.ok) {
@@ -93,25 +105,76 @@ export default function ResearchWorkspacePage() {
           const stored = localStorage.getItem('rp_custom_papers');
           if (stored) {
             const parsed = JSON.parse(stored);
-            localPapers = parsed.filter((p: Paper) => p.projectId === projectId);
+            localPapers = parsed.filter((p: Paper) => p.projectId === projectId && !deletedIds.has(p.id));
           }
         } catch (e) {
           console.warn('Local paper parse error:', e);
         }
       }
 
-      // Deduplicate by id
-      const seen = new Set(apiPapers.map((p) => p.id));
-      const combined = [...apiPapers];
-      for (const lp of localPapers) {
-        if (!seen.has(lp.id)) {
-          seen.add(lp.id);
-          combined.push(lp);
+      // Deduplicate by id and filter out any deleted papers
+      const seen = new Set<string>();
+      const combined: Paper[] = [];
+      for (const p of [...apiPapers, ...localPapers]) {
+        if (!seen.has(p.id) && !deletedIds.has(p.id)) {
+          seen.add(p.id);
+          combined.push(p);
         }
       }
       setPapers(combined);
     } catch (e) {
       console.error('Papers fetch error:', e);
+    }
+  };
+
+  const handleDeletePaper = async (paperId: string) => {
+    // 1. Optimistic UI update
+    setPapers((prev) => prev.filter((p) => p.id !== paperId));
+    if (selectedAnalysisPaperId === paperId) {
+      setSelectedAnalysisPaperId('');
+    }
+    if (selectedChatPaperId === paperId) {
+      setSelectedChatPaperId('');
+    }
+
+    // 2. Local storage cleanup & persistent tombstone
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('rp_custom_papers');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const updated = parsed.filter((p: any) => p.id !== paperId);
+          localStorage.setItem('rp_custom_papers', JSON.stringify(updated));
+        }
+
+        const storedChunks = localStorage.getItem('rp_custom_chunks');
+        if (storedChunks) {
+          const parsed = JSON.parse(storedChunks);
+          const updated = parsed.filter((c: any) => c.paperId !== paperId && c.paper_id !== paperId);
+          localStorage.setItem('rp_custom_chunks', JSON.stringify(updated));
+        }
+
+        const deletedStored = localStorage.getItem('rp_deleted_papers');
+        const deletedList = deletedStored ? JSON.parse(deletedStored) : [];
+        if (!deletedList.includes(paperId)) {
+          deletedList.push(paperId);
+          localStorage.setItem('rp_deleted_papers', JSON.stringify(deletedList));
+        }
+      } catch (err) {
+        console.warn('Local storage delete sync error:', err);
+      }
+    }
+
+    // 3. Backend API deletion
+    try {
+      await fetch(`/api/papers/${paperId}`, { method: 'DELETE' });
+    } catch (err) {
+      console.warn('API delete error:', err);
+    }
+
+    // 4. Update project details
+    if (currentProject?.id) {
+      fetchProjectDetails(currentProject.id);
     }
   };
 
@@ -297,6 +360,7 @@ export default function ResearchWorkspacePage() {
                 projectId={currentProject.id}
                 papers={papers}
                 onRefresh={refreshData}
+                onDeletePaper={handleDeletePaper}
                 onSelectPaperForAnalysis={handleSelectPaperForAnalysis}
                 onOpenCopilotForPaper={(pId) => {
                   setSelectedChatPaperId(pId);

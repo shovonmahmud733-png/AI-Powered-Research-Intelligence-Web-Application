@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { formatCitation, formatAuthorList } from '../src/lib/citations/formatters';
 import { calculateTransparentRelevance } from '../src/lib/scholarly/relevance';
 import { Paper } from '../src/lib/db/types';
+import { db } from '../src/lib/db';
 
 describe('Unit Tests: Citation Intelligence & Metadata Formatting', () => {
   const samplePaper: Paper = {
@@ -97,4 +98,55 @@ describe('Unit Tests: Deduplication & Transparent Relevance Engine', () => {
     expect(breakdown.mismatches.length).toBeGreaterThan(0);
     expect(breakdown.score).toBeLessThan(50);
   });
+
+  it('deletes paper and thoroughly purges chunks, matrix, and analysis records', () => {
+    const testPaperId = `paper-delete-test-${Date.now()}`;
+    const testProjectId = `proj-delete-test-${Date.now()}`;
+
+    // Create test paper
+    db.createPaper({
+      id: testPaperId,
+      projectId: testProjectId,
+      title: 'Temporary Test Paper to Delete',
+      authors: ['Test Author'],
+      abstract: 'Abstract for deletion test',
+      publicationYear: 2024,
+      journalOrConference: 'Test Conf',
+      url: '',
+      citationCount: 0,
+      sourceProvider: 'upload',
+      sourceId: 'test',
+      references: [],
+      retrievalDate: new Date().toISOString(),
+      metadataStatus: 'unverified',
+      retractionStatus: 'clean',
+      processingStatus: 'ready',
+      createdAt: new Date().toISOString(),
+    });
+
+    // Add chunk
+    db.addChunks([
+      {
+        id: `chunk-${testPaperId}`,
+        paperId: testPaperId,
+        projectId: testProjectId,
+        content: 'Test content to be purged',
+        sectionName: 'Introduction',
+        pageNumber: 1,
+        chunkIndex: 0,
+      },
+    ]);
+
+    expect(db.getPaperById(testPaperId)).toBeDefined();
+    expect(db.getChunksByPaper(testPaperId).length).toBeGreaterThan(0);
+
+    // Delete paper
+    const success = db.deletePaper(testPaperId);
+    expect(success).toBe(true);
+
+    // Verify completely purged
+    expect(db.getPaperById(testPaperId)).toBeUndefined();
+    expect(db.getChunksByPaper(testPaperId).length).toBe(0);
+  });
 });
+

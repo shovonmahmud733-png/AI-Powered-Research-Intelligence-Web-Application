@@ -24,6 +24,7 @@ interface PaperLibraryProps {
   onRefresh: () => void;
   onSelectPaperForAnalysis: (paperId: string) => void;
   onOpenCopilotForPaper?: (paperId: string) => void;
+  onDeletePaper?: (paperId: string) => void;
 }
 
 export const PaperLibrary: React.FC<PaperLibraryProps> = ({
@@ -32,12 +33,17 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
   onRefresh,
   onSelectPaperForAnalysis,
   onOpenCopilotForPaper,
+  onDeletePaper,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Delete Paper Confirmation Modal state
+  const [paperToDelete, setPaperToDelete] = useState<Paper | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Ask Paper Modal state
   const [activeAskPaper, setActiveAskPaper] = useState<Paper | null>(null);
@@ -145,13 +151,49 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
     }
   };
 
-  const handleDeletePaper = async (paperId: string) => {
-    if (!confirm('Are you sure you want to remove this paper and its extracted evidence from the project?')) return;
+  const confirmDeletePaper = async () => {
+    if (!paperToDelete) return;
+    const paperId = paperToDelete.id;
+    setIsDeleting(true);
+
     try {
-      const res = await fetch(`/api/papers/${paperId}`, { method: 'DELETE' });
-      if (res.ok) onRefresh();
+      // 1. Trigger parent optimistic delete if provided
+      if (onDeletePaper) {
+        onDeletePaper(paperId);
+      }
+
+      // 2. Synchronize localStorage cache & tombstone
+      if (typeof window !== 'undefined') {
+        try {
+          const storedPapers = JSON.parse(localStorage.getItem('rp_custom_papers') || '[]');
+          const updatedPapers = storedPapers.filter((p: any) => p.id !== paperId);
+          localStorage.setItem('rp_custom_papers', JSON.stringify(updatedPapers));
+
+          const storedChunks = JSON.parse(localStorage.getItem('rp_custom_chunks') || '[]');
+          const updatedChunks = storedChunks.filter((c: any) => c.paperId !== paperId && c.paper_id !== paperId);
+          localStorage.setItem('rp_custom_chunks', JSON.stringify(updatedChunks));
+
+          const deletedStored = localStorage.getItem('rp_deleted_papers');
+          const deletedList = deletedStored ? JSON.parse(deletedStored) : [];
+          if (!deletedList.includes(paperId)) {
+            deletedList.push(paperId);
+            localStorage.setItem('rp_deleted_papers', JSON.stringify(deletedList));
+          }
+        } catch (storageErr) {
+          console.warn('Local storage delete sync warning:', storageErr);
+        }
+      }
+
+      // 3. Call backend deletion API routes
+      await fetch(`/api/papers/${encodeURIComponent(paperId)}`, { method: 'DELETE' });
+
+      // 4. Refresh parent state
+      onRefresh();
     } catch (err) {
       console.error('Delete error:', err);
+    } finally {
+      setIsDeleting(false);
+      setPaperToDelete(null);
     }
   };
 
@@ -263,9 +305,14 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                 </button>
 
                 <button
-                  onClick={() => handleDeletePaper(paper.id)}
-                  className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-lg transition-colors"
-                  title="Remove Paper"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setPaperToDelete(paper);
+                  }}
+                  className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
+                  title="Remove Paper from Project"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -530,6 +577,60 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                 <Send className="w-3.5 h-3.5" />
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Paper Confirmation Modal */}
+      {paperToDelete && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#0f1422] rounded-2xl max-w-md w-full p-6 border border-zinc-200/90 dark:border-zinc-800/80 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-zinc-950 dark:text-zinc-50">
+                  Remove Publication from Project?
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  Are you sure you want to remove <span className="font-semibold text-zinc-900 dark:text-zinc-100">&ldquo;{paperToDelete.title}&rdquo;</span>?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-zinc-50 dark:bg-zinc-900/60 rounded-xl border border-zinc-200/70 dark:border-zinc-800/70 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              This will permanently remove the paper, its extracted sections, and indexed RAG evidence from this research project.
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setPaperToDelete(null)}
+                className="px-3.5 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={confirmDeletePaper}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Removing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Publication</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -80,3 +80,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const url = new URL(req.url);
+    const id = url.searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Paper ID is required' }, { status: 400 });
+    }
+    const cleanId = decodeURIComponent(id).trim();
+    db.deletePaper(cleanId);
+    return NextResponse.json({ success: true, deletedId: cleanId });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

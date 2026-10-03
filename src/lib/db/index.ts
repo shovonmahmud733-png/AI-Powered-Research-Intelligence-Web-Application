@@ -250,11 +250,17 @@ class DatabaseService {
 
   deletePaper(id: string): boolean {
     this.load();
-    this.data.papers = this.data.papers.filter((p) => p.id !== id);
-    this.data.chunks = this.data.chunks.filter((c) => c.paperId !== id);
-    this.data.analysis = this.data.analysis.filter((a) => a.paperId !== id);
-    this.data.matrix = this.data.matrix.filter((m) => m.paperId !== id);
-    this.data.evidence = this.data.evidence.filter((e) => e.paperId !== id);
+    const cleanId = decodeURIComponent(id).trim();
+    this.data.papers = this.data.papers.filter((p) => p.id !== id && p.id !== cleanId);
+    this.data.chunks = this.data.chunks.filter(
+      (c) => c.paperId !== id && c.paperId !== cleanId && c.paper_id !== id && c.paper_id !== cleanId
+    );
+    this.data.analysis = this.data.analysis.filter((a) => a.paperId !== id && a.paperId !== cleanId);
+    this.data.matrix = this.data.matrix.filter((m) => m.paperId !== id && m.paperId !== cleanId);
+    this.data.evidence = this.data.evidence.filter((e) => e.paperId !== id && e.paperId !== cleanId);
+    this.data.chatSessions = this.data.chatSessions.filter(
+      (s) => s.paperId !== id && s.paperId !== cleanId
+    );
     this.save();
     return true;
   }
