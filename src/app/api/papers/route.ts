@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Paper } from '@/lib/db/types';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const projectId = url.searchParams.get('projectId');
@@ -10,7 +12,14 @@ export async function GET(req: Request) {
   }
 
   const papers = db.getPapers(projectId);
-  return NextResponse.json({ papers });
+  return NextResponse.json(
+    { papers },
+    {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      },
+    }
+  );
 }
 
 export async function POST(req: Request) {
@@ -90,7 +99,14 @@ export async function DELETE(req: Request) {
     }
     const cleanId = decodeURIComponent(id).trim();
     db.deletePaper(cleanId);
-    return NextResponse.json({ success: true, deletedId: cleanId });
+    return NextResponse.json(
+      { success: true, deletedId: cleanId },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        },
+      }
+    );
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

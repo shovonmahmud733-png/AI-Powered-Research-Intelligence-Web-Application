@@ -148,5 +148,63 @@ describe('Unit Tests: Deduplication & Transparent Relevance Engine', () => {
     expect(db.getPaperById(testPaperId)).toBeUndefined();
     expect(db.getChunksByPaper(testPaperId).length).toBe(0);
   });
+
+  it('handles deletion of papers with URL-encoded IDs and multiple duplicates', () => {
+    const projId = `proj-dups-${Date.now()}`;
+    const p1Id = `paper-dup-1-${Date.now()}`;
+    const p2Id = `paper-dup-2-${Date.now()}`;
+
+    db.createPaper({
+      id: p1Id,
+      projectId: projId,
+      title: 'Duplicate Paper Title',
+      authors: ['Author A'],
+      abstract: 'Abstract 1',
+      publicationYear: 2024,
+      journalOrConference: 'Conf',
+      url: '',
+      citationCount: 0,
+      sourceProvider: 'upload',
+      sourceId: 'test1',
+      references: [],
+      retrievalDate: new Date().toISOString(),
+      metadataStatus: 'unverified',
+      retractionStatus: 'clean',
+      processingStatus: 'ready',
+      createdAt: new Date().toISOString(),
+    });
+
+    db.createPaper({
+      id: p2Id,
+      projectId: projId,
+      title: 'Duplicate Paper Title',
+      authors: ['Author A'],
+      abstract: 'Abstract 2',
+      publicationYear: 2024,
+      journalOrConference: 'Conf',
+      url: '',
+      citationCount: 0,
+      sourceProvider: 'upload',
+      sourceId: 'test2',
+      references: [],
+      retrievalDate: new Date().toISOString(),
+      metadataStatus: 'unverified',
+      retractionStatus: 'clean',
+      processingStatus: 'ready',
+      createdAt: new Date().toISOString(),
+    });
+
+    expect(db.getPapers(projId).length).toBe(2);
+
+    // Delete first copy via encoded ID
+    expect(db.deletePaper(encodeURIComponent(p1Id))).toBe(true);
+    expect(db.getPapers(projId).length).toBe(1);
+    expect(db.getPaperById(p1Id)).toBeUndefined();
+    expect(db.getPaperById(p2Id)).toBeDefined();
+
+    // Delete second copy
+    expect(db.deletePaper(p2Id)).toBe(true);
+    expect(db.getPapers(projId).length).toBe(0);
+  });
 });
 

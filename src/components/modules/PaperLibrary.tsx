@@ -41,9 +41,11 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // Delete Paper Confirmation Modal state
-  const [paperToDelete, setPaperToDelete] = useState<Paper | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // Delete action states
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeduplicating, setIsDeduplicating] = useState(false);
+  const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
 
   // Ask Paper Modal state
   const [activeAskPaper, setActiveAskPaper] = useState<Paper | null>(null);
@@ -151,54 +153,130 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
     }
   };
 
-  const confirmDeletePaper = async () => {
-    if (!paperToDelete) return;
-    const paperId = paperToDelete.id;
-    setIsDeleting(true);
+  // Count duplicate titles for smart one-click cleanup
+  const duplicateTitleCounts = papers.reduce((acc, p) => {
+    const key = (p.title || '').trim().toLowerCase();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const duplicatePaperCount = papers.filter((p) => {
+    const key = (p.title || '').trim().toLowerCase();
+    return (duplicateTitleCounts[key] || 0) > 1;
+  }).length;
+
+  const duplicateExcessCount = duplicatePaperCount > 0
+    ? duplicatePaperCount - Object.values(duplicateTitleCounts).filter((c) => c > 1).length
+    : 0;
+
+  const executeDeletePaper = async (paperId: string, shouldRefresh = true) => {
+    const rawId = paperId;
+    const decodedId = decodeURIComponent(paperId);
+    setDeletingId(rawId);
 
     try {
-      // 1. Trigger parent optimistic delete if provided
+      // 1. Immediately trigger parent optimistic UI update
       if (onDeletePaper) {
-        onDeletePaper(paperId);
+        onDeletePaper(rawId);
       }
 
       // 2. Synchronize localStorage cache & tombstone
       if (typeof window !== 'undefined') {
         try {
           const storedPapers = JSON.parse(localStorage.getItem('rp_custom_papers') || '[]');
-          const updatedPapers = storedPapers.filter((p: any) => p.id !== paperId);
+          const updatedPapers = storedPapers.filter(
+            (p: any) => p.id !== rawId && p.id !== decodedId
+          );
           localStorage.setItem('rp_custom_papers', JSON.stringify(updatedPapers));
 
           const storedChunks = JSON.parse(localStorage.getItem('rp_custom_chunks') || '[]');
-          const updatedChunks = storedChunks.filter((c: any) => c.paperId !== paperId && c.paper_id !== paperId);
+          const updatedChunks = storedChunks.filter(
+            (c: any) =>
+              c.paperId !== rawId &&
+              c.paperId !== decodedId &&
+              c.paper_id !== rawId &&
+              c.paper_id !== decodedId
+          );
           localStorage.setItem('rp_custom_chunks', JSON.stringify(updatedChunks));
 
           const deletedStored = localStorage.getItem('rp_deleted_papers');
-          const deletedList = deletedStored ? JSON.parse(deletedStored) : [];
-          if (!deletedList.includes(paperId)) {
-            deletedList.push(paperId);
-            localStorage.setItem('rp_deleted_papers', JSON.stringify(deletedList));
-          }
+          const deletedList: string[] = deletedStored ? JSON.parse(deletedStored) : [];
+          if (!deletedList.includes(rawId)) deletedList.push(rawId);
+          if (!deletedList.includes(decodedId)) deletedList.push(decodedId);
+          localStorage.setItem('rp_deleted_papers', JSON.stringify(deletedList));
         } catch (storageErr) {
           console.warn('Local storage delete sync warning:', storageErr);
         }
       }
 
-      // 3. Call backend deletion API routes
-      await fetch(`/api/papers/${encodeURIComponent(paperId)}`, { method: 'DELETE' });
+      // 3. Call backend deletion API routes with cache busting
+      await Promise.allSettled([
+        fetch(`/api/papers/${encodeURIComponent(rawId)}?_t=${Date.now()}`, {
+          method: 'DELETE',
+          cache: 'no-store',
+        }),
+        fetch(`/api/papers?id=${encodeURIComponent(rawId)}&_t=${Date.now()}`, {
+          method: 'DELETE',
+          cache: 'no-store',
+        }),
+      ]);
 
-      // 4. Refresh parent state
-      onRefresh();
+      if (shouldRefresh) {
+        onRefresh();
+      }
     } catch (err) {
       console.error('Delete error:', err);
     } finally {
-      setIsDeleting(false);
-      setPaperToDelete(null);
+      setDeletingId(null);
+      setConfirmingDeleteId(null);
+    }
+  };
+
+  const handleDeduplicate = async () => {
+    setIsDeduplicating(true);
+    try {
+      const seenTitles = new Set<string>();
+      const papersToDelete: string[] = [];
+
+      // Preserve first occurrence (or newest), mark remaining duplicates for deletion
+      for (const p of papers) {
+        const norm = (p.title || '').trim().toLowerCase();
+        if (seenTitles.has(norm)) {
+          papersToDelete.push(p.id);
+        } else {
+          seenTitles.add(norm);
+        }
+      }
+
+      for (const id of papersToDelete) {
+        await executeDeletePaper(id, false);
+      }
+
+      setFeedbackNotice(`Cleaned up ${papersToDelete.length} duplicate publication(s).`);
+      setTimeout(() => setFeedbackNotice(null), 3500);
+      onRefresh();
+    } catch (err) {
+      console.error('Deduplicate error:', err);
+    } finally {
+      setIsDeduplicating(false);
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Notice Banner */}
+      {feedbackNotice && (
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 font-medium flex items-center justify-between shadow-2xs">
+          <span>{feedbackNotice}</span>
+          <button
+            onClick={() => setFeedbackNotice(null)}
+            className="text-emerald-600 dark:text-emerald-400 p-0.5 hover:text-emerald-800 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Header and Upload Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#0f1422] p-4 sm:p-5 rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 shadow-xs">
         <div>
@@ -211,7 +289,24 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
           </p>
         </div>
 
-        <div>
+        <div className="flex items-center space-x-2">
+          {duplicateExcessCount > 0 && (
+            <button
+              type="button"
+              onClick={handleDeduplicate}
+              disabled={isDeduplicating}
+              className="inline-flex items-center space-x-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer disabled:opacity-50"
+              title="Automatically keep only the newest copy of each duplicate paper"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>
+                {isDeduplicating
+                  ? 'Removing Duplicates...'
+                  : `Deduplicate Library (${duplicateExcessCount} duplicate${duplicateExcessCount > 1 ? 's' : ''})`}
+              </span>
+            </button>
+          )}
+
           <button
             onClick={() => setIsUploading(true)}
             className="inline-flex items-center space-x-2 px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 text-xs font-semibold rounded-xl shadow-xs hover:shadow-sm transition-all"
@@ -304,18 +399,53 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
                   <span>Structured Analysis</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setPaperToDelete(paper);
-                  }}
-                  className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
-                  title="Remove Paper from Project"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {confirmingDeleteId === paper.id ? (
+                  <div className="flex items-center space-x-1 animate-in fade-in duration-150">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        executeDeletePaper(paper.id);
+                      }}
+                      disabled={deletingId === paper.id}
+                      className="inline-flex items-center space-x-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[11px] font-semibold transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+                      title="Click to permanently confirm deletion"
+                    >
+                      {deletingId === paper.id ? (
+                        <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3 h-3" />
+                      )}
+                      <span>Confirm Delete</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setConfirmingDeleteId(null);
+                      }}
+                      className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      title="Cancel"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setConfirmingDeleteId(paper.id);
+                    }}
+                    className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
+                    title="Remove Paper from Project"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -581,59 +711,6 @@ export const PaperLibrary: React.FC<PaperLibraryProps> = ({
         </div>
       )}
 
-      {/* Delete Paper Confirmation Modal */}
-      {paperToDelete && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#0f1422] rounded-2xl max-w-md w-full p-6 border border-zinc-200/90 dark:border-zinc-800/80 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-start gap-3.5">
-              <div className="p-2.5 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 shrink-0">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-zinc-950 dark:text-zinc-50">
-                  Remove Publication from Project?
-                </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  Are you sure you want to remove <span className="font-semibold text-zinc-900 dark:text-zinc-100">&ldquo;{paperToDelete.title}&rdquo;</span>?
-                </p>
-              </div>
-            </div>
-
-            <div className="p-3 bg-zinc-50 dark:bg-zinc-900/60 rounded-xl border border-zinc-200/70 dark:border-zinc-800/70 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              This will permanently remove the paper, its extracted sections, and indexed RAG evidence from this research project.
-            </div>
-
-            <div className="flex justify-end gap-2.5 pt-1">
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => setPaperToDelete(null)}
-                className="px-3.5 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={confirmDeletePaper}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
-              >
-                {isDeleting ? (
-                  <>
-                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Removing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Delete Publication</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

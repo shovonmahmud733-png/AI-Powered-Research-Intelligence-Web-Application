@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -52,7 +54,14 @@ export async function DELETE(
     const { id } = await params;
     const cleanId = decodeURIComponent(id).trim();
     db.deletePaper(cleanId);
-    return NextResponse.json({ success: true, deletedId: cleanId });
+    return NextResponse.json(
+      { success: true, deletedId: cleanId },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        },
+      }
+    );
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

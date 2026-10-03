@@ -84,14 +84,25 @@ export default function ResearchWorkspacePage() {
         try {
           const storedDeleted = localStorage.getItem('rp_deleted_papers');
           if (storedDeleted) {
-            deletedIds = new Set(JSON.parse(storedDeleted));
+            const list: string[] = JSON.parse(storedDeleted);
+            list.forEach((id) => {
+              deletedIds.add(id);
+              deletedIds.add(decodeURIComponent(id));
+              deletedIds.add(encodeURIComponent(id));
+            });
           }
         } catch (e) {
           console.warn('Deleted papers parse error:', e);
         }
       }
 
-      const res = await fetch(`/api/papers?projectId=${projectId}`);
+      const res = await fetch(`/api/papers?projectId=${projectId}&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          Pragma: 'no-cache',
+        },
+      });
       let apiPapers: Paper[] = [];
       if (res.ok) {
         const data = await res.json();
@@ -105,7 +116,9 @@ export default function ResearchWorkspacePage() {
           const stored = localStorage.getItem('rp_custom_papers');
           if (stored) {
             const parsed = JSON.parse(stored);
-            localPapers = parsed.filter((p: Paper) => p.projectId === projectId && !deletedIds.has(p.id));
+            localPapers = parsed.filter(
+              (p: Paper) => p.projectId === projectId && !deletedIds.has(p.id) && !deletedIds.has(decodeURIComponent(p.id))
+            );
           }
         } catch (e) {
           console.warn('Local paper parse error:', e);
@@ -116,8 +129,10 @@ export default function ResearchWorkspacePage() {
       const seen = new Set<string>();
       const combined: Paper[] = [];
       for (const p of [...apiPapers, ...localPapers]) {
-        if (!seen.has(p.id) && !deletedIds.has(p.id)) {
+        const pDecoded = decodeURIComponent(p.id);
+        if (!seen.has(p.id) && !seen.has(pDecoded) && !deletedIds.has(p.id) && !deletedIds.has(pDecoded)) {
           seen.add(p.id);
+          seen.add(pDecoded);
           combined.push(p);
         }
       }
@@ -128,12 +143,15 @@ export default function ResearchWorkspacePage() {
   };
 
   const handleDeletePaper = async (paperId: string) => {
+    const rawId = paperId;
+    const decodedId = decodeURIComponent(paperId);
+
     // 1. Optimistic UI update
-    setPapers((prev) => prev.filter((p) => p.id !== paperId));
-    if (selectedAnalysisPaperId === paperId) {
+    setPapers((prev) => prev.filter((p) => p.id !== rawId && p.id !== decodedId));
+    if (selectedAnalysisPaperId === rawId || selectedAnalysisPaperId === decodedId) {
       setSelectedAnalysisPaperId('');
     }
-    if (selectedChatPaperId === paperId) {
+    if (selectedChatPaperId === rawId || selectedChatPaperId === decodedId) {
       setSelectedChatPaperId('');
     }
 
@@ -143,31 +161,45 @@ export default function ResearchWorkspacePage() {
         const stored = localStorage.getItem('rp_custom_papers');
         if (stored) {
           const parsed = JSON.parse(stored);
-          const updated = parsed.filter((p: any) => p.id !== paperId);
+          const updated = parsed.filter((p: any) => p.id !== rawId && p.id !== decodedId);
           localStorage.setItem('rp_custom_papers', JSON.stringify(updated));
         }
 
         const storedChunks = localStorage.getItem('rp_custom_chunks');
         if (storedChunks) {
           const parsed = JSON.parse(storedChunks);
-          const updated = parsed.filter((c: any) => c.paperId !== paperId && c.paper_id !== paperId);
+          const updated = parsed.filter(
+            (c: any) =>
+              c.paperId !== rawId &&
+              c.paperId !== decodedId &&
+              c.paper_id !== rawId &&
+              c.paper_id !== decodedId
+          );
           localStorage.setItem('rp_custom_chunks', JSON.stringify(updated));
         }
 
         const deletedStored = localStorage.getItem('rp_deleted_papers');
-        const deletedList = deletedStored ? JSON.parse(deletedStored) : [];
-        if (!deletedList.includes(paperId)) {
-          deletedList.push(paperId);
-          localStorage.setItem('rp_deleted_papers', JSON.stringify(deletedList));
-        }
+        const deletedList: string[] = deletedStored ? JSON.parse(deletedStored) : [];
+        if (!deletedList.includes(rawId)) deletedList.push(rawId);
+        if (!deletedList.includes(decodedId)) deletedList.push(decodedId);
+        localStorage.setItem('rp_deleted_papers', JSON.stringify(deletedList));
       } catch (err) {
         console.warn('Local storage delete sync error:', err);
       }
     }
 
-    // 3. Backend API deletion
+    // 3. Backend API deletion (call both route patterns with cache busting)
     try {
-      await fetch(`/api/papers/${paperId}`, { method: 'DELETE' });
+      await Promise.allSettled([
+        fetch(`/api/papers/${encodeURIComponent(rawId)}?_t=${Date.now()}`, {
+          method: 'DELETE',
+          cache: 'no-store',
+        }),
+        fetch(`/api/papers?id=${encodeURIComponent(rawId)}&_t=${Date.now()}`, {
+          method: 'DELETE',
+          cache: 'no-store',
+        }),
+      ]);
     } catch (err) {
       console.warn('API delete error:', err);
     }
