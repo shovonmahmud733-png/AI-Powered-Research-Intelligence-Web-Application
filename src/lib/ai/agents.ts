@@ -122,8 +122,10 @@ export class VerificationAgent {
 
     // Check for explicit contradiction tokens (e.g. "not", "fails", "degrades", "outperforms")
     const isContradiction =
-      (claimLower.includes('outperform') && (chunkText.includes('degraded') || chunkText.includes('underperformed'))) ||
-      (claimLower.includes('improve') && chunkText.includes('failed to improve'));
+      (claimLower.includes('outperform') && (chunkText.includes('degraded') || chunkText.includes('underperformed') || chunkText.includes('drop'))) ||
+      (claimLower.includes('improve') && (chunkText.includes('failed to improve') || chunkText.includes('drop'))) ||
+      (claimLower.includes('underperform') && (chunkText.includes('outperformed') || chunkText.includes('achieved'))) ||
+      (claimLower.includes('fail') && (chunkText.includes('outperformed') || chunkText.includes('achieved')));
 
     let status: 'Supported' | 'Partially Supported' | 'Contradicted' | 'Insufficient Evidence' = 'Supported';
     if (isContradiction) {
