@@ -131,7 +131,8 @@ export const EvidenceEngine: React.FC<EvidenceEngineProps> = ({
       supported,
       partially,
       contradicted,
-      insufficient: insufficient + requiresVerification,
+      insufficient,
+      requiresVerification,
       supportedRate,
     };
   }, [evidenceList]);
@@ -336,6 +337,13 @@ export const EvidenceEngine: React.FC<EvidenceEngineProps> = ({
           badgeClass: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60',
           dotClass: 'bg-rose-500',
         };
+      case 'requires_verification':
+        return {
+          label: 'Requires Verification',
+          icon: HelpCircle,
+          badgeClass: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
+          dotClass: 'bg-amber-500',
+        };
       case 'insufficient_evidence':
       default:
         return {
@@ -512,6 +520,7 @@ export const EvidenceEngine: React.FC<EvidenceEngineProps> = ({
               <option value="partially_supported">Partially Supported ({metrics.partially})</option>
               <option value="contradicted">Contradicted ({metrics.contradicted})</option>
               <option value="insufficient_evidence">Insufficient Evidence ({metrics.insufficient})</option>
+              <option value="requires_verification">Requires Verification ({metrics.requiresVerification})</option>
             </select>
 
             {/* Filter by Paper */}
@@ -731,6 +740,7 @@ export const EvidenceEngine: React.FC<EvidenceEngineProps> = ({
                     <option value="partially_supported">Partially Supported</option>
                     <option value="contradicted">Contradicted</option>
                     <option value="insufficient_evidence">Insufficient Evidence</option>
+                    <option value="requires_verification">Requires Verification</option>
                   </select>
                 </div>
 
@@ -931,10 +941,12 @@ export const EvidenceEngine: React.FC<EvidenceEngineProps> = ({
                     </span>
 
                     {/* Exact Location Tag */}
-                    <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                      <span className="text-zinc-400">Loc:</span>
-                      <span className="font-semibold text-zinc-800 dark:text-zinc-200">{item.location}</span>
-                    </span>
+                    {item.location && (
+                      <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                        <span className="text-zinc-400">Loc:</span>
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">{item.location}</span>
+                      </span>
+                    )}
                   </div>
 
                   {/* Right side: Confidence & Actions */}
@@ -1006,10 +1018,14 @@ export const EvidenceEngine: React.FC<EvidenceEngineProps> = ({
                       <span>Verbatim Extract</span>
                     </span>
                     <span className="flex items-center gap-2">
-                      <span className="bg-zinc-200/70 dark:bg-zinc-800 px-2 py-0.5 rounded text-[10px] font-semibold text-zinc-700 dark:text-zinc-300">
-                        Page {item.page}
-                      </span>
-                      <span className="text-zinc-400 hidden sm:inline">Section: {item.section}</span>
+                      {item.page !== undefined && item.page !== null && (
+                        <span className="bg-zinc-200/70 dark:bg-zinc-800 px-2 py-0.5 rounded text-[10px] font-semibold text-zinc-700 dark:text-zinc-300">
+                          Page {item.page}
+                        </span>
+                      )}
+                      {item.section && (
+                        <span className="text-zinc-400 hidden sm:inline">Section: {item.section}</span>
+                      )}
                     </span>
                   </div>
 
@@ -1058,6 +1074,17 @@ export const EvidenceEngine: React.FC<EvidenceEngineProps> = ({
                           className="font-mono text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
                         >
                           <span>DOI: {enrichedPaper.doi}</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      )}
+                      {(enrichedPaper?.openAccessUrl || enrichedPaper?.url) && (
+                        <a
+                          href={enrichedPaper.openAccessUrl || enrichedPaper.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-zinc-500 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-blue-400 hover:underline flex items-center gap-0.5"
+                        >
+                          <span>PDF / Source</span>
                           <ExternalLink className="w-2.5 h-2.5" />
                         </a>
                       )}
