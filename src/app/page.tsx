@@ -452,7 +452,25 @@ export default function ResearchWorkspacePage() {
               />
             )}
             {subView === 'claim_verifier' && currentProject && (
-              <ClaimVerifier projectId={currentProject.id} />
+              <ClaimVerifier
+                projectId={currentProject.id}
+                papers={papers}
+                selectedPaperId={selectedAnalysisPaperId || selectedChatPaperId}
+                onOpenPaper={(pId) => {
+                  setSelectedAnalysisPaperId(pId);
+                  setSelectedChatPaperId(pId);
+                  setStage('understand');
+                  setSubView('papers');
+                }}
+                onNavigateToContradictions={() => {
+                  setStage('investigate');
+                  setSubView('contradictions');
+                }}
+                onNavigateToEvidence={() => {
+                  setStage('investigate');
+                  setSubView('evidence');
+                }}
+              />
             )}
             {subView === 'contradictions' && currentProject && (
               <ContradictionDetector projectId={currentProject.id} papers={papers} />
