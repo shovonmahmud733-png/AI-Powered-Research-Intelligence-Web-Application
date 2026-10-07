@@ -436,7 +436,20 @@ export default function ResearchWorkspacePage() {
 
             {/* 3. INVESTIGATE */}
             {subView === 'evidence' && currentProject && (
-              <EvidenceEngine projectId={currentProject.id} papers={papers} />
+              <EvidenceEngine
+                projectId={currentProject.id}
+                papers={papers}
+                onOpenPaper={(pId) => {
+                  setSelectedAnalysisPaperId(pId);
+                  setSelectedChatPaperId(pId);
+                  setStage('understand');
+                  setSubView('papers');
+                }}
+                onNavigateToContradictions={() => {
+                  setStage('investigate');
+                  setSubView('contradictions');
+                }}
+              />
             )}
             {subView === 'claim_verifier' && currentProject && (
               <ClaimVerifier projectId={currentProject.id} />
