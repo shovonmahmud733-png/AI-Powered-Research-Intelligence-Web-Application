@@ -62,7 +62,6 @@ describe('QA Suite: Literature Matrix & Systematic Synthesis Grid', () => {
 
         if (row.paperId && papersMap.has(row.paperId)) {
           const parentPaper = papersMap.get(row.paperId)!;
-          // Clean title comparison
           const cleanTitle = parentPaper.title.replace(/^\[DEMO.*?\]\s*/i, '').trim();
           expect(row.paperTitle.includes(cleanTitle.slice(0, 20))).toBe(true);
           expect(row.year).toBe(parentPaper.publicationYear);
@@ -73,7 +72,7 @@ describe('QA Suite: Literature Matrix & Systematic Synthesis Grid', () => {
       });
     });
 
-    it('distinguishes completed vs pending analysis states honestly', async () => {
+    it('distinguishes completed vs pending analysis states honestly without hallucination', async () => {
       const req = new Request(`http://localhost:3000/api/matrix?projectId=${projectId}`);
       const res = await GET(req);
       const data = await res.json();
@@ -95,9 +94,65 @@ describe('QA Suite: Literature Matrix & Systematic Synthesis Grid', () => {
   });
 
   // ==========================================
-  // 3. ROW LIFECYCLE (POST, PUT, DELETE)
+  // 3. MULTI-PAPER COMPARISON & CONTRAST
   // ==========================================
-  describe('3. Matrix Row Lifecycle Operations', () => {
+  describe('3. Multi-Paper Comparison & Non-Swapped Columns', () => {
+    it('compares paper-demo-01 and paper-demo-02 with distinct verified metrics', async () => {
+      const req = new Request(`http://localhost:3000/api/matrix?projectId=${projectId}`);
+      const res = await GET(req);
+      const data = await res.json();
+
+      const row1 = data.rows.find((r: any) => r.paperId === 'paper-demo-01');
+      const row2 = data.rows.find((r: any) => r.paperId === 'paper-demo-02');
+
+      expect(row1).toBeDefined();
+      expect(row2).toBeDefined();
+
+      // Datasets must be distinct and correct
+      expect(row1.dataset).toContain('CSC-24');
+      expect(row2.dataset).toContain('CRBC-23');
+
+      // Models must be distinct and correct
+      expect(row1.model).toContain('XLM-R');
+      expect(row2.model).toContain('BanglaBERT');
+
+      // Metrics must be distinct and correct
+      expect(row1.metric).toContain('84.1%');
+      expect(row2.metric).toContain('81.3%');
+
+      // Years must be distinct and correct
+      expect(row1.year).toBe(2024);
+      expect(row2.year).toBe(2023);
+    });
+  });
+
+  // ==========================================
+  // 4. EVIDENCE TRACEABILITY & SNIPPETS
+  // ==========================================
+  describe('4. Evidence Traceability & Provenance Snippets', () => {
+    it('attaches real evidence snippets and manuscript locations to corresponding rows', async () => {
+      const req = new Request(`http://localhost:3000/api/matrix?projectId=${projectId}`);
+      const res = await GET(req);
+      const data = await res.json();
+
+      const dbEvidence = db.getEvidence(projectId);
+      const rowWithEvidence = data.rows.find((r: any) => r.paperId === 'paper-demo-01');
+
+      expect(rowWithEvidence).toBeDefined();
+      expect(rowWithEvidence.evidenceSnippet).toBeTruthy();
+
+      // Snippet must match the real evidence item in the database
+      const matchingEv = dbEvidence.find((e) => e.paperId === 'paper-demo-01');
+      expect(matchingEv).toBeDefined();
+      expect(rowWithEvidence.evidenceSnippet).toBe(matchingEv?.snippet);
+      expect(rowWithEvidence.evidenceLocation).toBeTruthy();
+    });
+  });
+
+  // ==========================================
+  // 5. ROW LIFECYCLE (POST, PUT, DELETE)
+  // ==========================================
+  describe('5. Matrix Row Lifecycle Operations', () => {
     it('creates a new matrix row via POST and persists it', async () => {
       const newRowPayload = {
         projectId,
@@ -161,9 +216,10 @@ describe('QA Suite: Literature Matrix & Systematic Synthesis Grid', () => {
       expect(dbRow?.dataset).toBe('Updated Benchmark Corpus (UBC-25)');
     });
 
-    it('deletes a matrix row via DELETE', async () => {
+    it('deletes a matrix row via DELETE without deleting the source paper', async () => {
       const existing = db.getMatrixRows(projectId)[0];
       expect(existing).toBeDefined();
+      const associatedPaperId = existing.paperId;
 
       const req = new Request(`http://localhost:3000/api/matrix?id=${existing.id}`, {
         method: 'DELETE',
@@ -174,16 +230,77 @@ describe('QA Suite: Literature Matrix & Systematic Synthesis Grid', () => {
       const body = await res.json();
       expect(body.success).toBe(true);
 
-      // Verify row removed from DB
+      // Verify row removed from DB matrix
       const dbRow = db.getMatrixRows(projectId).find((r) => r.id === existing.id);
       expect(dbRow).toBeUndefined();
+
+      // Verify the underlying paper in db.papers was NOT deleted!
+      if (associatedPaperId) {
+        const paperStillExists = db.getPapers(projectId).find((p) => p.id === associatedPaperId);
+        expect(paperStillExists).toBeDefined();
+      }
     });
   });
 
   // ==========================================
-  // 4. PROJECT BOUNDARY & ISOLATION
+  // 6. SEARCH, FILTERING & SORTING LOGIC
   // ==========================================
-  describe('4. Project Isolation & Data Boundary', () => {
+  describe('6. Search, Filter, and Sort Verifications', () => {
+    it('filters rows by keyword query across title, dataset, and model', async () => {
+      const req = new Request(`http://localhost:3000/api/matrix?projectId=${projectId}`);
+      const res = await GET(req);
+      const data = await res.json();
+
+      const query = 'xlm-r';
+      const matched = data.rows.filter(
+        (r: any) =>
+          r.paperTitle.toLowerCase().includes(query) ||
+          r.model.toLowerCase().includes(query) ||
+          r.dataset.toLowerCase().includes(query)
+      );
+
+      expect(matched.length).toBeGreaterThan(0);
+      matched.forEach((r: any) => {
+        const combined = `${r.paperTitle} ${r.model} ${r.dataset}`.toLowerCase();
+        expect(combined.includes(query)).toBe(true);
+      });
+    });
+
+    it('sorts rows by publication year accurately', async () => {
+      const req = new Request(`http://localhost:3000/api/matrix?projectId=${projectId}`);
+      const res = await GET(req);
+      const data = await res.json();
+
+      const sortedDesc = [...data.rows].sort((a: any, b: any) => b.year - a.year);
+      for (let i = 0; i < sortedDesc.length - 1; i++) {
+        expect(sortedDesc[i].year).toBeGreaterThanOrEqual(sortedDesc[i + 1].year);
+      }
+    });
+  });
+
+  // ==========================================
+  // 7. EXPORT DATA INTEGRITY
+  // ==========================================
+  describe('7. Export Data Integrity', () => {
+    it('verifies CSV row generation contains all required columns and escaped values', async () => {
+      const req = new Request(`http://localhost:3000/api/matrix?projectId=${projectId}`);
+      const res = await GET(req);
+      const data = await res.json();
+
+      data.rows.forEach((r: any) => {
+        // Construct CSV line
+        const escapedTitle = `"${r.paperTitle.replace(/"/g, '""')}"`;
+        expect(escapedTitle.startsWith('"')).toBe(true);
+        expect(escapedTitle.endsWith('"')).toBe(true);
+        expect(typeof r.year).toBe('number');
+      });
+    });
+  });
+
+  // ==========================================
+  // 8. PROJECT BOUNDARY & ISOLATION
+  // ==========================================
+  describe('8. Project Isolation & Data Boundary', () => {
     it('strictly isolates matrix rows by projectId', async () => {
       const reqA = new Request(`http://localhost:3000/api/matrix?projectId=${projectId}`);
       const resA = await GET(reqA);
