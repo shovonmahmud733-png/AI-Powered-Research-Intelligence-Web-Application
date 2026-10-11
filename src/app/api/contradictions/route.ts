@@ -16,7 +16,22 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { projectId, topic, paperAId, claimA, evidenceA, pageA, paperBId, claimB, evidenceB, pageB, potentialReasons, notes } = body;
+    const {
+      projectId,
+      topic,
+      paperAId,
+      claimA,
+      evidenceA,
+      pageA,
+      paperBId,
+      claimB,
+      evidenceB,
+      pageB,
+      potentialReasons,
+      notes,
+      status,
+      conflictCategory,
+    } = body;
 
     if (!projectId || !topic || !paperAId || !paperBId) {
       return NextResponse.json({ error: 'projectId, topic, paperAId, and paperBId are required' }, { status: 400 });
@@ -33,18 +48,40 @@ export async function POST(req: Request) {
       paperATitle: paperA ? paperA.title : 'First Compared Paper',
       claimA: claimA || '',
       evidenceA: evidenceA || '',
-      pageA: pageA || 1,
+      pageA: typeof pageA === 'number' ? pageA : parseInt(pageA, 10) || 1,
       paperBId,
       paperBTitle: paperB ? paperB.title : 'Second Compared Paper',
       claimB: claimB || '',
       evidenceB: evidenceB || '',
-      pageB: pageB || 1,
-      potentialReasons: Array.isArray(potentialReasons) ? potentialReasons : ['Differences in evaluation dataset', 'Variance in preprocessing pipelines'],
+      pageB: typeof pageB === 'number' ? pageB : parseInt(pageB, 10) || 1,
+      potentialReasons: Array.isArray(potentialReasons) && potentialReasons.length > 0 ? potentialReasons : ['Differences in evaluation dataset', 'Variance in preprocessing pipelines'],
       notes: notes || '',
+      status: status || 'detected',
+      conflictCategory: conflictCategory || 'methodological_divergence',
+      createdAt: new Date().toISOString(),
     };
 
     const saved = db.createContradiction(newContradiction);
     return NextResponse.json({ contradiction: saved }, { status: 201 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const body = await req.json();
+    const { id, updates } = body;
+    if (!id || !updates || typeof updates !== 'object') {
+      return NextResponse.json({ error: 'id and updates object are required' }, { status: 400 });
+    }
+
+    const updated = db.updateContradiction(id, updates);
+    if (!updated) {
+      return NextResponse.json({ error: 'Contradiction not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ contradiction: updated });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

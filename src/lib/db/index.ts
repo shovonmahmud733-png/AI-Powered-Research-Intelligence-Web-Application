@@ -414,6 +414,15 @@ class DatabaseService {
     return true;
   }
 
+  updateContradiction(id: string, updates: Partial<Contradiction>): Contradiction | undefined {
+    this.load();
+    const index = this.data.contradictions.findIndex((c) => c.id === id);
+    if (index === -1) return undefined;
+    this.data.contradictions[index] = { ...this.data.contradictions[index], ...updates };
+    this.save();
+    return this.data.contradictions[index];
+  }
+
   // Research Gaps
   getGaps(projectId: string): ResearchGap[] {
     this.load();

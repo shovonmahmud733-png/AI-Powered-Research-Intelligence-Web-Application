@@ -473,7 +473,20 @@ export default function ResearchWorkspacePage() {
               />
             )}
             {subView === 'contradictions' && currentProject && (
-              <ContradictionDetector projectId={currentProject.id} papers={papers} />
+              <ContradictionDetector
+                projectId={currentProject.id}
+                papers={papers}
+                onOpenPaper={(pId) => {
+                  setSelectedAnalysisPaperId(pId);
+                  setSelectedChatPaperId(pId);
+                  setStage('understand');
+                  setSubView('papers');
+                }}
+                onNavigateToEvidence={() => {
+                  setStage('investigate');
+                  setSubView('evidence');
+                }}
+              />
             )}
             {subView === 'gaps' && currentProject && (
               <ResearchGapEngine projectId={currentProject.id} papers={papers} />

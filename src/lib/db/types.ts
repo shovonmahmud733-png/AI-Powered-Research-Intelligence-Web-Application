@@ -160,6 +160,9 @@ export interface Contradiction {
   pageB: number;
   potentialReasons: string[];
   notes?: string;
+  status?: 'detected' | 'under_review' | 'researcher_reviewed';
+  conflictCategory?: 'direct_empirical' | 'methodological_divergence' | 'dataset_variation' | 'scope_difference' | 'theoretical';
+  createdAt?: string;
 }
 
 export interface ResearchGap {
