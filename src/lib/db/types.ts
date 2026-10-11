@@ -112,6 +112,16 @@ export interface LiteratureMatrixRow {
   result: string;
   limitation: string;
   customColumns: Record<string, string>;
+  authors?: string[];
+  journalOrConference?: string;
+  doi?: string;
+  sampleSize?: string;
+  researchProblem?: string;
+  researchObjective?: string;
+  futureWork?: string;
+  evidenceSnippet?: string;
+  evidenceLocation?: string;
+  analysisStatus?: 'completed' | 'pending' | 'not_analyzed';
 }
 
 export interface Evidence {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { LiteratureMatrixRow } from '@/lib/db/types';
+import { db } from '../../../lib/db';
+import { LiteratureMatrixRow } from '../../../lib/db/types';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -10,7 +10,48 @@ export async function GET(req: Request) {
   }
 
   const rows = db.getMatrixRows(projectId);
-  return NextResponse.json({ rows });
+  const papers = db.getPapers(projectId);
+  const papersMap = new Map(papers.map((p) => [p.id, p]));
+  const evidenceList = db.getEvidence(projectId);
+
+  const enrichedRows = rows.map((r) => {
+    const p = papersMap.get(r.paperId);
+    const analysis = p ? db.getAnalysisByPaper(p.id) : undefined;
+    const paperEvidence = evidenceList.find((e) => e.paperId === r.paperId);
+
+    return {
+      ...r,
+      authors: p?.authors || r.authors || [],
+      journalOrConference: p?.journalOrConference || r.journalOrConference || '',
+      doi: p?.doi || r.doi || '',
+      sampleSize: analysis?.datasetSize || r.sampleSize || '',
+      researchProblem: analysis?.researchProblem || r.researchProblem || '',
+      futureWork: analysis?.futureWork?.join('; ') || r.futureWork || '',
+      evidenceSnippet: paperEvidence?.snippet || r.evidenceSnippet || '',
+      evidenceLocation: paperEvidence?.location || paperEvidence?.section || r.evidenceLocation || '',
+      analysisStatus: analysis
+        ? ('completed' as const)
+        : r.dataset === 'Pending extraction'
+        ? ('pending' as const)
+        : ('not_analyzed' as const),
+    };
+  });
+
+  const existingPaperIds = new Set(rows.map((r) => r.paperId));
+  const availablePapers = papers.filter((p) => !existingPaperIds.has(p.id));
+
+  return NextResponse.json({
+    rows: enrichedRows,
+    totalRows: enrichedRows.length,
+    availablePapers: availablePapers.map((p) => ({
+      id: p.id,
+      title: p.title,
+      authors: p.authors,
+      publicationYear: p.publicationYear,
+      venue: p.journalOrConference,
+      doi: p.doi,
+    })),
+  });
 }
 
 export async function POST(req: Request) {

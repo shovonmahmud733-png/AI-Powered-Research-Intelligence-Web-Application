@@ -528,7 +528,21 @@ export default function ResearchWorkspacePage() {
 
             {/* 4. BUILD */}
             {subView === 'matrix' && currentProject && (
-              <LiteratureMatrix projectId={currentProject.id} />
+              <LiteratureMatrix
+                projectId={currentProject.id}
+                projectTitle={currentProject.title}
+                papers={papers}
+                onOpenPaper={(pId) => {
+                  setSelectedAnalysisPaperId(pId);
+                  setSelectedChatPaperId(pId);
+                  setStage('understand');
+                  setSubView('papers');
+                }}
+                onNavigateToEvidence={() => {
+                  setStage('investigate');
+                  setSubView('evidence');
+                }}
+              />
             )}
             {subView === 'comparison' && (
               <PaperComparison papers={papers} />
