@@ -128,10 +128,12 @@ export const ContradictionDetector: React.FC<ContradictionDetectorProps> = ({
   const [newClaimA, setNewClaimA] = useState('');
   const [newEvidenceA, setNewEvidenceA] = useState('');
   const [newPageA, setNewPageA] = useState<number>(1);
+  const [newSectionA, setNewSectionA] = useState('');
   const [newPaperBId, setNewPaperBId] = useState('');
   const [newClaimB, setNewClaimB] = useState('');
   const [newEvidenceB, setNewEvidenceB] = useState('');
   const [newPageB, setNewPageB] = useState<number>(1);
+  const [newSectionB, setNewSectionB] = useState('');
   const [newPotentialReasons, setNewPotentialReasons] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [newStatus, setNewStatus] = useState<ReviewStatus>('detected');
@@ -344,10 +346,12 @@ export const ContradictionDetector: React.FC<ContradictionDetectorProps> = ({
     setNewClaimA('');
     setNewEvidenceA('');
     setNewPageA(1);
+    setNewSectionA('');
     setNewPaperBId(papers.length > 1 ? papers[1].id : papers.length > 0 ? papers[0].id : '');
     setNewClaimB('');
     setNewEvidenceB('');
     setNewPageB(1);
+    setNewSectionB('');
     setNewPotentialReasons('Evaluation Dataset Discrepancy\nPreprocessing & Tokenization Pipeline Variance\nHyperparameter & Epoch Configuration Discrepancy');
     setNewNotes('');
     setNewStatus('detected');
@@ -403,10 +407,12 @@ export const ContradictionDetector: React.FC<ContradictionDetectorProps> = ({
           claimA: newClaimA.trim(),
           evidenceA: newEvidenceA.trim(),
           pageA: newPageA,
+          sectionA: newSectionA.trim() || undefined,
           paperBId: newPaperBId,
           claimB: newClaimB.trim(),
           evidenceB: newEvidenceB.trim(),
           pageB: newPageB,
+          sectionB: newSectionB.trim() || undefined,
           potentialReasons: reasonsList,
           notes: newNotes.trim(),
           status: newStatus,
@@ -692,12 +698,12 @@ export const ContradictionDetector: React.FC<ContradictionDetectorProps> = ({
             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-500/20">
               <GitCompare className="w-6 h-6" />
             </div>
-            <div className="max-w-md mx-auto space-y-1">
+            <div className="max-w-md mx-auto space-y-1.5">
               <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
-                No Empirical Contradictions Registered Yet
+                No Empirical Contradictions Registered in Current Corpus
               </h3>
               <p className="text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                When studies yield conflicting metrics or diverging recommendations, register them here to systematically record experimental conditions, dataset variants, and synthesize the scientific root cause.
+                No conflicting empirical findings have been recorded for this project yet. Absence of registered contradiction records does not imply complete consensus across the entire literature field; untested edge cases or divergent methodology may still exist.
               </p>
             </div>
             <div>
@@ -840,7 +846,7 @@ export const ContradictionDetector: React.FC<ContradictionDetectorProps> = ({
                           Position A
                         </span>
                         <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 bg-white dark:bg-[#0f1422] px-2 py-0.5 rounded-md border border-zinc-200/70 dark:border-zinc-800/70">
-                          Page {contra.pageA}
+                          Page {contra.pageA}{contra.sectionA ? ` • ${contra.sectionA}` : ''}
                         </span>
                       </div>
 
@@ -873,6 +879,18 @@ export const ContradictionDetector: React.FC<ContradictionDetectorProps> = ({
                               <span className="italic truncate max-w-[200px]">
                                 &bull; {paperA.journalOrConference}
                               </span>
+                            )}
+                            {paperA.doi && (
+                              <a
+                                href={`https://doi.org/${paperA.doi}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-mono text-[10px] text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5 ml-0.5"
+                                title="Open DOI resolver"
+                              >
+                                <span>DOI: {paperA.doi}</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
                             )}
                           </div>
                         )}
@@ -923,7 +941,7 @@ export const ContradictionDetector: React.FC<ContradictionDetectorProps> = ({
                           Position B
                         </span>
                         <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 bg-white dark:bg-[#0f1422] px-2 py-0.5 rounded-md border border-zinc-200/70 dark:border-zinc-800/70">
-                          Page {contra.pageB}
+                          Page {contra.pageB}{contra.sectionB ? ` • ${contra.sectionB}` : ''}
                         </span>
                       </div>
 
@@ -956,6 +974,18 @@ export const ContradictionDetector: React.FC<ContradictionDetectorProps> = ({
                               <span className="italic truncate max-w-[200px]">
                                 &bull; {paperB.journalOrConference}
                               </span>
+                            )}
+                            {paperB.doi && (
+                              <a
+                                href={`https://doi.org/${paperB.doi}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-mono text-[10px] text-purple-600 dark:text-purple-400 hover:underline inline-flex items-center gap-0.5 ml-0.5"
+                                title="Open DOI resolver"
+                              >
+                                <span>DOI: {paperB.doi}</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
                             )}
                           </div>
                         )}
@@ -1218,17 +1248,31 @@ export const ContradictionDetector: React.FC<ContradictionDetectorProps> = ({
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="font-medium text-zinc-700 dark:text-zinc-300">
-                      Page Coordinate
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={newPageA}
-                      onChange={(e) => setNewPageA(parseInt(e.target.value, 10) || 1)}
-                      className="w-24 p-2 bg-white dark:bg-[#0f1422] border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="font-medium text-zinc-700 dark:text-zinc-300">
+                        Page Coordinate
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={newPageA}
+                        onChange={(e) => setNewPageA(parseInt(e.target.value, 10) || 1)}
+                        className="w-full p-2 bg-white dark:bg-[#0f1422] border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-medium text-zinc-700 dark:text-zinc-300">
+                        Section (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Results"
+                        value={newSectionA}
+                        onChange={(e) => setNewSectionA(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-[#0f1422] border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1287,17 +1331,31 @@ export const ContradictionDetector: React.FC<ContradictionDetectorProps> = ({
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="font-medium text-zinc-700 dark:text-zinc-300">
-                      Page Coordinate
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={newPageB}
-                      onChange={(e) => setNewPageB(parseInt(e.target.value, 10) || 1)}
-                      className="w-24 p-2 bg-white dark:bg-[#0f1422] border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="font-medium text-zinc-700 dark:text-zinc-300">
+                        Page Coordinate
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={newPageB}
+                        onChange={(e) => setNewPageB(parseInt(e.target.value, 10) || 1)}
+                        className="w-full p-2 bg-white dark:bg-[#0f1422] border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-medium text-zinc-700 dark:text-zinc-300">
+                        Section (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Methodology"
+                        value={newSectionB}
+                        onChange={(e) => setNewSectionB(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-[#0f1422] border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

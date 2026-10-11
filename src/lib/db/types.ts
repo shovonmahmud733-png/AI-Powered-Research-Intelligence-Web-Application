@@ -153,11 +153,13 @@ export interface Contradiction {
   claimA: string;
   evidenceA: string;
   pageA: number;
+  sectionA?: string;
   paperBId: string;
   paperBTitle: string;
   claimB: string;
   evidenceB: string;
   pageB: number;
+  sectionB?: string;
   potentialReasons: string[];
   notes?: string;
   status?: 'detected' | 'under_review' | 'researcher_reviewed';
