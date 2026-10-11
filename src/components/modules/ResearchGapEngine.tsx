@@ -1067,7 +1067,7 @@ export const ResearchGapEngine: React.FC<ResearchGapEngineProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5 text-blue-500" />
-                      <span>Evidentiary Grounding ({gap.supportingPaperIds?.length || 0} Supporting Studies)</span>
+                      <span>Evidentiary Grounding ({Array.from(new Set(gap.supportingPaperIds || [])).length} Supporting Studies)</span>
                     </span>
                     <span className="text-[10px] font-mono text-zinc-400">
                       Grounded in Peer-Reviewed Corpus
@@ -1077,7 +1077,7 @@ export const ResearchGapEngine: React.FC<ResearchGapEngineProps> = ({
                   {/* Supporting Papers List */}
                   <div className="space-y-2.5">
                     {gap.supportingPaperIds && gap.supportingPaperIds.length > 0 ? (
-                      gap.supportingPaperIds.map((paperId, idx) => {
+                      Array.from(new Set(gap.supportingPaperIds)).map((paperId, idx) => {
                         const paper = papersMap.get(paperId);
                         const paperTitle = paper ? paper.title : gap.supportingPaperTitles?.[idx] || paperId;
                         const limitations = analysesCache[paperId] || [];
