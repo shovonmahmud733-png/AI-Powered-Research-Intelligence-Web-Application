@@ -196,16 +196,34 @@ export interface ResearchGap {
 export interface KnowledgeGraphNode {
   id: string;
   label: string;
-  type: 'paper' | 'author' | 'dataset' | 'model' | 'method' | 'topic' | 'gap';
+  type: 'paper' | 'author' | 'dataset' | 'model' | 'method' | 'topic' | 'gap' | 'finding';
   details?: string;
   count?: number;
+  paperId?: string;
+  paperTitle?: string;
+  authors?: string[];
+  publicationYear?: number;
+  venue?: string;
+  doi?: string;
+  citationCount?: number;
+  gapId?: string;
+  evidenceId?: string;
+  confidence?: number;
+  evidenceType?: string;
+  location?: string;
+  projectId?: string;
 }
 
 export interface KnowledgeGraphEdge {
+  id?: string;
   source: string;
   target: string;
   relationship: string;
   confidence?: number;
+  label?: string;
+  paperId?: string;
+  paperTitle?: string;
+  evidenceSnippet?: string;
 }
 
 export interface KnowledgeGraphData {

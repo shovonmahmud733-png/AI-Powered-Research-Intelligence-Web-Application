@@ -505,7 +505,25 @@ export default function ResearchWorkspacePage() {
               />
             )}
             {subView === 'knowledge_graph' && currentProject && (
-              <KnowledgeGraph projectId={currentProject.id} />
+              <KnowledgeGraph
+                projectId={currentProject.id}
+                projectTitle={currentProject.title}
+                papers={papers}
+                onOpenPaper={(pId) => {
+                  setSelectedAnalysisPaperId(pId);
+                  setSelectedChatPaperId(pId);
+                  setStage('understand');
+                  setSubView('papers');
+                }}
+                onNavigateToEvidence={() => {
+                  setStage('investigate');
+                  setSubView('evidence');
+                }}
+                onNavigateToGaps={() => {
+                  setStage('investigate');
+                  setSubView('gaps');
+                }}
+              />
             )}
 
             {/* 4. BUILD */}
