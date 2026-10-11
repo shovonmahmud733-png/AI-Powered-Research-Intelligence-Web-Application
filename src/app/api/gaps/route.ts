@@ -16,7 +16,21 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { projectId, title, description, category, supportingPaperIds, contraryEvidence, confidence, verificationStatus, proposedDirection } = body;
+    const {
+      projectId,
+      title,
+      description,
+      category,
+      supportingPaperIds,
+      contraryEvidence,
+      confidence,
+      verificationStatus,
+      proposedDirection,
+      whyItMatters,
+      researcherNotes,
+      directionStatus,
+      evidenceSnippets,
+    } = body;
 
     if (!projectId || !title) {
       return NextResponse.json({ error: 'projectId and title are required' }, { status: 400 });
@@ -40,6 +54,12 @@ export async function POST(req: Request) {
       confidence: confidence || 'moderate',
       verificationStatus: verificationStatus || 'Under Investigation',
       proposedDirection: proposedDirection || 'Further experimental exploration recommended.',
+      whyItMatters: whyItMatters || undefined,
+      researcherNotes: researcherNotes || '',
+      directionStatus: directionStatus || 'ai_suggested',
+      evidenceSnippets: Array.isArray(evidenceSnippets) ? evidenceSnippets : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const saved = db.createGap(newGap);
@@ -57,7 +77,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Gap id is required' }, { status: 400 });
     }
 
-    const updated = db.updateGap(id, updates);
+    const updated = db.updateGap(id, { ...updates, updatedAt: new Date().toISOString() });
     if (!updated) {
       return NextResponse.json({ error: 'Research gap record not found' }, { status: 404 });
     }

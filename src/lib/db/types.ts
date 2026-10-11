@@ -179,6 +179,18 @@ export interface ResearchGap {
   confidence: 'high' | 'moderate' | 'exploratory';
   verificationStatus: 'Researcher Verified' | 'Under Investigation' | 'Dismissed';
   proposedDirection: string;
+  whyItMatters?: string;
+  researcherNotes?: string;
+  directionStatus?: 'ai_suggested' | 'researcher_approved';
+  evidenceSnippets?: {
+    paperId: string;
+    paperTitle: string;
+    snippet: string;
+    page?: number;
+    section?: string;
+  }[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface KnowledgeGraphNode {

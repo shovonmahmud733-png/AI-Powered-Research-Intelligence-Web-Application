@@ -176,7 +176,7 @@ export class GapAgent {
         supportingPaperIds: allLimitations.slice(0, 2).map((l) => l.paperId),
         supportingPaperTitles: papers.slice(0, 2).map((p) => p.title),
         confidence: 'high',
-        verificationStatus: 'Researcher Verified',
+        verificationStatus: 'Under Investigation',
         proposedDirection:
           'Investigate unified morphology-aware byte-fallback or character-level language model pre-training.',
       });

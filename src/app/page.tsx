@@ -489,7 +489,20 @@ export default function ResearchWorkspacePage() {
               />
             )}
             {subView === 'gaps' && currentProject && (
-              <ResearchGapEngine projectId={currentProject.id} papers={papers} />
+              <ResearchGapEngine
+                projectId={currentProject.id}
+                papers={papers}
+                onOpenPaper={(pId) => {
+                  setSelectedAnalysisPaperId(pId);
+                  setSelectedChatPaperId(pId);
+                  setStage('understand');
+                  setSubView('papers');
+                }}
+                onNavigateToEvidence={() => {
+                  setStage('investigate');
+                  setSubView('evidence');
+                }}
+              />
             )}
             {subView === 'knowledge_graph' && currentProject && (
               <KnowledgeGraph projectId={currentProject.id} />
