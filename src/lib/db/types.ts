@@ -338,3 +338,63 @@ export interface ChatSession {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface PaperComparisonItem {
+  paperId: string;
+  title: string;
+  authors: string[];
+  year: number;
+  journal?: string;
+  doi?: string;
+  hasStructuredAnalysis: boolean;
+  analysisStatus: 'extracted' | 'pending' | 'unextracted';
+  problem: string | null;
+  researchQuestions: string[];
+  contributions: string[];
+  dataset: string | null;
+  datasetSize: string | null;
+  model: string | null;
+  methodology: string | string[] | null;
+  trainingSetup: string | null;
+  metrics: string | string[] | null;
+  results: Record<string, string | number> | null;
+  limitations: string[];
+  researchDirection: string[];
+  evidenceSnippets?: {
+    id: string;
+    claim: string;
+    page: number;
+    section: string;
+    snippet: string;
+    evidenceType: string;
+    verificationStatus: string;
+  }[];
+  gapsAddressed?: {
+    id: string;
+    title: string;
+    category: string;
+    confidence: string;
+  }[];
+}
+
+export interface PaperComparisonSynthesis {
+  papersCompared: number;
+  comparisons: PaperComparisonItem[];
+  sharedCharacteristics: {
+    dimension: string;
+    description: string;
+    papersInvolved: string[];
+  }[];
+  contrastingDimensions: {
+    dimension: string;
+    description: string;
+    details: { paperTitle: string; value: string }[];
+  }[];
+  comparabilityNotes: {
+    level: 'warning' | 'info' | 'caution';
+    title: string;
+    note: string;
+  }[];
+  synthesisNote: string;
+}
+

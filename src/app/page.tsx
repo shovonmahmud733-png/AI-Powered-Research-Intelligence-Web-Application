@@ -545,7 +545,25 @@ export default function ResearchWorkspacePage() {
               />
             )}
             {subView === 'comparison' && (
-              <PaperComparison papers={papers} />
+              <PaperComparison
+                papers={papers}
+                projectId={currentProject?.id}
+                projectTitle={currentProject?.title}
+                onOpenPaper={(pId) => {
+                  setSelectedAnalysisPaperId(pId);
+                  setSelectedChatPaperId(pId);
+                  setStage('understand');
+                  setSubView('papers');
+                }}
+                onNavigateToEvidence={() => {
+                  setStage('investigate');
+                  setSubView('evidence');
+                }}
+                onNavigateToGaps={() => {
+                  setStage('investigate');
+                  setSubView('gaps');
+                }}
+              />
             )}
             {subView === 'experiments' && currentProject && (
               <ExperimentTracker projectId={currentProject.id} papers={papers} />
