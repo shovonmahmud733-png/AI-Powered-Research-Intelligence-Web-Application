@@ -1,12 +1,26 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { researchChatEngine } from '@/lib/ai/chatEngine';
-import { getSessionUser } from '@/lib/auth/session';
+import { db } from '../../../../../lib/db';
+import { researchChatEngine } from '../../../../../lib/ai/chatEngine';
+import { getSessionUser } from '../../../../../lib/auth/session';
 
 export async function POST(req: Request) {
   try {
     const user = getSessionUser(req);
-    const { sessionId, projectId, scope = 'project', paperId, searchAcrossLibrary = false } = await req.json();
+    const {
+      sessionId,
+      projectId,
+      scope = 'project',
+      paperId,
+      searchAcrossLibrary = false,
+      aiAssistanceEnabled = true,
+    } = await req.json();
+
+    if (aiAssistanceEnabled === false) {
+      return NextResponse.json(
+        { error: 'AI assistance is currently disabled (AI OFF mode). Enable AI assistance to regenerate responses.' },
+        { status: 400 }
+      );
+    }
 
     if (!sessionId || !projectId) {
       return NextResponse.json({ error: 'sessionId and projectId are required' }, { status: 400 });

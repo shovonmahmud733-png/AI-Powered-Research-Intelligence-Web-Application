@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { researchChatEngine } from '@/lib/ai/chatEngine';
-import { getSessionUser } from '@/lib/auth/session';
-import { ChatMessage } from '@/lib/db/types';
+import { db } from '../../../../lib/db';
+import { researchChatEngine } from '../../../../lib/ai/chatEngine';
+import { getSessionUser } from '../../../../lib/auth/session';
+import { ChatMessage } from '../../../../lib/db/types';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -29,7 +29,16 @@ export async function POST(req: Request) {
       stream = false,
       clientPapers,
       clientChunks,
+      aiAssistanceEnabled = true,
     } = body;
+
+    // Phase 3 & 6: Preserve AI OFF mode behavior
+    if (aiAssistanceEnabled === false) {
+      return NextResponse.json(
+        { error: 'AI assistance is currently disabled (AI OFF mode). Enable AI assistance to generate responses.' },
+        { status: 400 }
+      );
+    }
 
     if (!sessionId || !projectId || !content) {
       return NextResponse.json(

@@ -1,5 +1,23 @@
 import { ScoredChunk } from './vectorStore';
 import { normalizeExtractedText } from '../pdf/parser';
+import OpenAI from 'openai';
+
+export interface ProviderHealthStatus {
+  status:
+    | 'missing_credentials'
+    | 'configured'
+    | 'connected'
+    | 'authentication_failed'
+    | 'quota_exceeded'
+    | 'rate_limited'
+    | 'model_inaccessible'
+    | 'network_failure'
+    | 'error';
+  configured: boolean;
+  provider: string;
+  model: string;
+  message: string;
+}
 
 export type TaskCategory =
   | 'summarization'
@@ -218,53 +236,219 @@ class OfflineAcademicEngine implements LLMProvider {
 }
 
 // 2. OpenAI Provider (when OPENAI_API_KEY is available)
-class OpenAIProvider implements LLMProvider {
+export class OpenAIProvider implements LLMProvider {
   name = 'OpenAI';
 
   isAvailable(): boolean {
-    return Boolean(process.env.OPENAI_API_KEY);
+    return Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim().length > 0);
+  }
+
+  getClient(): OpenAI {
+    return new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+
+  getModel(): string {
+    return process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  }
+
+  private handleOpenAIError(err: any, model: string): never {
+    if (err instanceof OpenAI.AuthenticationError) {
+      throw new Error('OpenAI Authentication Failed: Invalid API key. Please check your OPENAI_API_KEY.');
+    }
+    if (err instanceof OpenAI.PermissionDeniedError) {
+      throw new Error(`OpenAI Permission Denied: Access to model '${model}' is not authorized for this API key.`);
+    }
+    if (err instanceof OpenAI.NotFoundError) {
+      throw new Error(`OpenAI Model Not Found: The model '${model}' does not exist or your account lacks access.`);
+    }
+    if (err instanceof OpenAI.RateLimitError) {
+      const isQuota = /quota|billing|credit/i.test(err.message || '');
+      if (isQuota) {
+        throw new Error('OpenAI Quota Exceeded: Your account has exceeded its current API quota or billing limit.');
+      }
+      throw new Error('OpenAI Rate Limit Exceeded: Too many requests. Please wait and try again.');
+    }
+    if (err instanceof OpenAI.APIConnectionTimeoutError) {
+      throw new Error('OpenAI Connection Timeout: Request timed out while communicating with OpenAI.');
+    }
+    if (err instanceof OpenAI.APIConnectionError) {
+      throw new Error('OpenAI Network Failure: Could not connect to OpenAI API servers. Verify network connectivity.');
+    }
+    if (err instanceof OpenAI.BadRequestError) {
+      throw new Error(`OpenAI Bad Request: ${err.message}`);
+    }
+    if (err instanceof OpenAI.APIError) {
+      throw new Error(`OpenAI API Error (${err.status}): ${err.message}`);
+    }
+    throw err;
+  }
+
+  async checkHealth(): Promise<ProviderHealthStatus> {
+    const apiKey = process.env.OPENAI_API_KEY;
+    const model = this.getModel();
+
+    if (!apiKey || !apiKey.trim()) {
+      return {
+        status: 'missing_credentials',
+        configured: false,
+        provider: 'OpenAI',
+        model,
+        message: 'OPENAI_API_KEY is not configured in server environment.',
+      };
+    }
+
+    try {
+      const client = this.getClient();
+      // Verify connectivity and model accessibility
+      await client.models.retrieve(model);
+
+      return {
+        status: 'connected',
+        configured: true,
+        provider: 'OpenAI',
+        model,
+        message: `Successfully connected to OpenAI API. Model '${model}' is verified accessible.`,
+      };
+    } catch (err: any) {
+      if (err instanceof OpenAI.AuthenticationError) {
+        return {
+          status: 'authentication_failed',
+          configured: true,
+          provider: 'OpenAI',
+          model,
+          message: 'OpenAI authentication failed: Invalid API key.',
+        };
+      }
+      if (err instanceof OpenAI.PermissionDeniedError) {
+        return {
+          status: 'model_inaccessible',
+          configured: true,
+          provider: 'OpenAI',
+          model,
+          message: `Access to model '${model}' is not authorized for this API key.`,
+        };
+      }
+      if (err instanceof OpenAI.NotFoundError) {
+        return {
+          status: 'model_inaccessible',
+          configured: true,
+          provider: 'OpenAI',
+          model,
+          message: `OpenAI model '${model}' was not found or is inaccessible.`,
+        };
+      }
+      if (err instanceof OpenAI.RateLimitError) {
+        const isQuota = /quota|billing|credit/i.test(err.message || '');
+        return {
+          status: isQuota ? 'quota_exceeded' : 'rate_limited',
+          configured: true,
+          provider: 'OpenAI',
+          model,
+          message: isQuota
+            ? 'OpenAI API quota or billing limit exceeded.'
+            : 'OpenAI rate limit exceeded. Please wait.',
+        };
+      }
+      if (
+        err instanceof OpenAI.APIConnectionTimeoutError ||
+        err instanceof OpenAI.APIConnectionError
+      ) {
+        return {
+          status: 'network_failure',
+          configured: true,
+          provider: 'OpenAI',
+          model,
+          message: 'Network connection to OpenAI servers failed. Verify network connectivity.',
+        };
+      }
+      return {
+        status: 'error',
+        configured: true,
+        provider: 'OpenAI',
+        model,
+        message: err.message || 'OpenAI health check encountered an error.',
+      };
+    }
   }
 
   async generate(req: LLMRequest): Promise<LLMResponse> {
     const apiKey = process.env.OPENAI_API_KEY;
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    const model = this.getModel();
 
-    const evidenceContext = (req.retrievedChunks || [])
-      .map(
-        (c) =>
-          `[PAGE ${c.chunk.pageNumber} | SECTION: ${c.chunk.sectionName}]\n${c.chunk.content}`
-      )
-      .join('\n\n---\n\n');
-
-    const promptWithContext = `Paper Context:\n${evidenceContext}\n\nResearcher Question: ${req.prompt}\n\nPlease answer concisely and objectively, citing exact page numbers and sections from the context. Do not invent page numbers.`;
-
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content:
-              req.systemPrompt ||
-              'You are a rigorous academic research assistant. Ground all statements strictly in the provided paper context. When evidence is insufficient, explicitly state that.',
-          },
-          { role: 'user', content: promptWithContext },
-        ],
-        temperature: req.temperature ?? 0.2,
-      }),
-    });
-
-    if (!res.ok) {
-      throw new Error(`OpenAI API error: ${res.statusText}`);
+    if (!apiKey || !apiKey.trim()) {
+      throw new Error('OpenAI API key is missing. Set OPENAI_API_KEY in your server-side environment variables.');
     }
 
-    const data = await res.json();
-    const answer = data.choices?.[0]?.message?.content || 'No response returned from model.';
+    const client = this.getClient();
+    const systemPrompt =
+      req.systemPrompt ||
+      'You are a rigorous academic research assistant. Ground all statements strictly in the provided paper context. When evidence is insufficient, explicitly state that.';
+    const userPrompt = req.prompt;
+
+    let answer = '';
+    let usageData: { promptTokens: number; completionTokens: number } | undefined;
+
+    // Prefer the Responses API for newer SDK integrations, falling back to chat completions if model/endpoint requires
+    try {
+      const response = await client.responses.create({
+        model,
+        instructions: systemPrompt,
+        input: userPrompt,
+        temperature: req.temperature ?? 0.2,
+      });
+
+      answer = response.output_text || '';
+      if (!answer && Array.isArray((response as any).output)) {
+        for (const item of (response as any).output) {
+          if (item.type === 'message' && Array.isArray(item.content)) {
+            for (const c of item.content) {
+              if (c.type === 'text') answer += c.text;
+            }
+          }
+        }
+      }
+      if (response.usage) {
+        usageData = {
+          promptTokens: response.usage.input_tokens || 0,
+          completionTokens: response.usage.output_tokens || 0,
+        };
+      }
+    } catch (responsesErr: any) {
+      // Re-throw fatal client errors (auth, quota, rate-limit, network) without retrying completions
+      if (
+        responsesErr instanceof OpenAI.AuthenticationError ||
+        responsesErr instanceof OpenAI.PermissionDeniedError ||
+        responsesErr instanceof OpenAI.RateLimitError ||
+        responsesErr instanceof OpenAI.APIConnectionError ||
+        responsesErr instanceof OpenAI.APIConnectionTimeoutError
+      ) {
+        this.handleOpenAIError(responsesErr, model);
+      }
+
+      // If Responses API is not supported by model, try chat completions API
+      try {
+        const completion = await client.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: req.temperature ?? 0.2,
+        });
+
+        answer = completion.choices[0]?.message?.content || 'No response returned from model.';
+        if (completion.usage) {
+          usageData = {
+            promptTokens: completion.usage.prompt_tokens,
+            completionTokens: completion.usage.completion_tokens,
+          };
+        }
+      } catch (chatErr: any) {
+        this.handleOpenAIError(chatErr, model);
+      }
+    }
 
     return {
       answer,
@@ -276,12 +460,7 @@ class OpenAIProvider implements LLMProvider {
       })),
       modelUsed: model,
       provider: 'OpenAI',
-      usage: data.usage
-        ? {
-            promptTokens: data.usage.prompt_tokens,
-            completionTokens: data.usage.completion_tokens,
-          }
-        : undefined,
+      usage: usageData,
     };
   }
 }
@@ -415,14 +594,18 @@ class AnthropicProvider implements LLMProvider {
 // 5. Multi-LLM Router
 export class ModelRouter {
   private providers: LLMProvider[] = [
+    new OpenAIProvider(),
     new GoogleGeminiProvider(),
     new AnthropicProvider(),
-    new OpenAIProvider(),
     new OfflineAcademicEngine(),
   ];
 
   selectProvider(task: TaskCategory): LLMProvider {
-    // If an external key exists and is available, prioritize it
+    // If OPENAI_API_KEY is configured, prioritize the official OpenAI provider
+    const openAi = this.providers.find((p) => p.name === 'OpenAI' && p.isAvailable());
+    if (openAi) return openAi;
+
+    // If another external key exists and is available, use it
     const external = this.providers.find((p) => p.name !== 'Academic Local Reasoning Engine' && p.isAvailable());
     if (external) return external;
 
@@ -435,11 +618,14 @@ export class ModelRouter {
     try {
       return await provider.generate(req);
     } catch (err) {
-      console.warn(`Provider ${provider.name} failed, falling back to Local Reasoning Engine:`, err);
-      const fallback = new OfflineAcademicEngine();
-      return await fallback.generate(req);
+      // MANDATORY RULE: Never disguise provider failures as successful AI responses.
+      // Do not return hardcoded fallback text as a genuine OpenAI response.
+      console.error(`Provider [${provider.name}] execution failed:`, err);
+      throw err;
     }
   }
 }
 
+export const openAIProvider = new OpenAIProvider();
 export const modelRouter = new ModelRouter();
+
