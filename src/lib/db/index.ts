@@ -366,13 +366,50 @@ class DatabaseService {
   }
 
   // Evidence
-  getEvidence(projectId: string): Evidence[] {
+  getEvidence(projectId: string, filter?: { paperId?: string }): Evidence[] {
     this.load();
-    return this.data.evidence.filter((e) => e.projectId === projectId);
+    let items = this.data.evidence.filter((e) => e.projectId === projectId);
+    if (filter?.paperId) {
+      items = items.filter((e) => e.paperId === filter.paperId);
+    }
+    return items;
   }
 
-  createEvidence(evidence: Evidence): Evidence {
+  getEvidenceById(id: string): Evidence | undefined {
     this.load();
+    return this.data.evidence.find((e) => e.id === id);
+  }
+
+  getEvidenceByPaper(paperId: string): Evidence[] {
+    this.load();
+    return this.data.evidence.filter((e) => e.paperId === paperId);
+  }
+
+  createEvidence(evidence: Evidence, deduplicate: boolean = true): Evidence {
+    this.load();
+    if (deduplicate && evidence.snippet) {
+      // Safe deduplication: check if exact same paperId and snippet already exists in this project
+      const normalizedSnippet = evidence.snippet.trim().toLowerCase();
+      const existing = this.data.evidence.find(
+        (e) =>
+          e.projectId === evidence.projectId &&
+          e.paperId === evidence.paperId &&
+          e.snippet?.trim().toLowerCase() === normalizedSnippet
+      );
+      if (existing) {
+        if (evidence.researcherNotes && !existing.researcherNotes) {
+          existing.researcherNotes = evidence.researcherNotes;
+        }
+        if (evidence.isResearcherVerified && !existing.isResearcherVerified) {
+          existing.isResearcherVerified = true;
+        }
+        if (evidence.topic && !existing.topic) {
+          existing.topic = evidence.topic;
+        }
+        this.save();
+        return existing;
+      }
+    }
     this.data.evidence.unshift(evidence);
     this.save();
     return evidence;
@@ -382,7 +419,11 @@ class DatabaseService {
     this.load();
     const idx = this.data.evidence.findIndex((e) => e.id === id);
     if (idx === -1) return undefined;
-    this.data.evidence[idx] = { ...this.data.evidence[idx], ...updates };
+    this.data.evidence[idx] = {
+      ...this.data.evidence[idx],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
     this.save();
     return this.data.evidence[idx];
   }
@@ -392,6 +433,48 @@ class DatabaseService {
     this.data.evidence = this.data.evidence.filter((e) => e.id !== id);
     this.save();
     return true;
+  }
+
+  validateEvidenceFidelity(paperId: string, snippet: string): {
+    matched: boolean;
+    chunkId?: string;
+    section?: string;
+    pageNumber?: number;
+    quality: 'verified' | 'approximate' | 'uncertain';
+  } {
+    this.load();
+    const cleanSnippet = snippet?.trim().toLowerCase();
+    if (!cleanSnippet || cleanSnippet.length < 15) {
+      return { matched: false, quality: 'uncertain' };
+    }
+    const chunks = this.getChunksByPaper(paperId);
+    for (const chunk of chunks) {
+      const chunkText = chunk.content?.toLowerCase() || '';
+      if (chunkText.includes(cleanSnippet)) {
+        return {
+          matched: true,
+          chunkId: chunk.id || chunk.chunk_id,
+          section: chunk.sectionName || chunk.section,
+          pageNumber: chunk.pageNumber ?? chunk.page_number,
+          quality: 'verified',
+        };
+      }
+    }
+    // Check approximate overlap (first 50 chars)
+    const subSnippet = cleanSnippet.slice(0, Math.min(50, cleanSnippet.length));
+    for (const chunk of chunks) {
+      const chunkText = chunk.content?.toLowerCase() || '';
+      if (chunkText.includes(subSnippet)) {
+        return {
+          matched: true,
+          chunkId: chunk.id || chunk.chunk_id,
+          section: chunk.sectionName || chunk.section,
+          pageNumber: chunk.pageNumber ?? chunk.page_number,
+          quality: 'approximate',
+        };
+      }
+    }
+    return { matched: false, quality: 'uncertain' };
   }
 
   // Contradictions

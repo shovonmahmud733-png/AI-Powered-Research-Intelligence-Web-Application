@@ -130,15 +130,25 @@ export interface Evidence {
   paperId: string;
   paperTitle: string;
   claim: string;
-  page: number;
-  section: string;
+  page?: number;
+  section?: string;
   snippet: string;
-  evidenceType: 'empirical' | 'theoretical' | 'benchmark' | 'qualitative';
-  confidence: number;
+  evidenceType: 'empirical' | 'theoretical' | 'benchmark' | 'qualitative' | 'methodological' | 'contextual';
+  confidence?: number;
   verificationStatus: 'supported' | 'partially_supported' | 'contradicted' | 'insufficient_evidence' | 'requires_verification';
   location: string;
   createdBy: string;
   createdAt: string;
+  updatedAt?: string;
+  researcherNotes?: string;
+  topic?: string;
+  researchQuestion?: string;
+  sourceType?: 'verbatim_extract' | 'ai_synthesized' | 'manual_annotation';
+  isResearcherVerified?: boolean;
+  relationship?: 'supports' | 'opposes' | 'contextual' | 'methodological';
+  extractionQuality?: 'verified' | 'approximate' | 'uncertain';
+  chunkId?: string;
+  tags?: string[];
 }
 
 export interface ClaimVerificationRecord {
@@ -363,8 +373,8 @@ export interface PaperComparisonItem {
   evidenceSnippets?: {
     id: string;
     claim: string;
-    page: number;
-    section: string;
+    page?: number;
+    section?: string;
     snippet: string;
     evidenceType: string;
     verificationStatus: string;
