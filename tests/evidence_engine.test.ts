@@ -388,4 +388,106 @@ describe('QA Suite: Evidence Engine & Reliable Source Verification Workflow', ()
       expect(data.evidence.length).toBe(0);
     });
   });
+
+  describe('7. Malformed Metadata & Deletion Lifecycle', () => {
+    it('handles malformed records with missing snippet or location gracefully', async () => {
+      const res = await callPost({
+        projectId,
+        paperId: paper1Id,
+        claim: 'Claim with minimal metadata',
+        snippet: 'Minimal snippet content without page or section coordinates.',
+      });
+
+      expect([200, 201]).toContain(res.status);
+      const data = await res.json();
+      const id = data.evidence.id;
+
+      try {
+        const getRes = await callGet(`projectId=${projectId}`);
+        const allEv = (await getRes.json()).evidence;
+        const found = allEv.find((e: any) => e.id === id);
+        expect(found).toBeDefined();
+        expect(found.claim).toBe('Claim with minimal metadata');
+        expect(found.paperId).toBe(paper1Id);
+        expect(found.paperTitle).toBeTruthy();
+      } finally {
+        await callDelete(id);
+      }
+    });
+
+    it('successfully deletes an evidence record and verifies it is removed from project queries', async () => {
+      const createRes = await callPost({
+        projectId,
+        paperId: paper2Id,
+        claim: 'Temporary assertion for deletion test',
+        snippet: 'Temporary verbatim passage for deletion test verification.',
+      });
+
+      const createData = await createRes.json();
+      const id = createData.evidence.id;
+
+      // Verify it exists
+      const beforeDelete = await callGet(`projectId=${projectId}`);
+      const beforeList = (await beforeDelete.json()).evidence;
+      expect(beforeList.some((e: any) => e.id === id)).toBe(true);
+
+      // Delete it
+      const deleteRes = await callDelete(id);
+      expect(deleteRes.status).toBe(200);
+      const deleteData = await deleteRes.json();
+      expect(deleteData.success).toBe(true);
+
+      // Verify it is gone
+      const afterDelete = await callGet(`projectId=${projectId}`);
+      const afterList = (await afterDelete.json()).evidence;
+      expect(afterList.some((e: any) => e.id === id)).toBe(false);
+    });
+  });
+
+  describe('8. AI OFF Manual Review & Cross-Feature Integrity', () => {
+    it('allows recording manual evidence with custom annotations in AI OFF mode', async () => {
+      const manualRes = await callPost({
+        projectId,
+        paperId: paper1Id,
+        claim: 'Manual scholar assertion entered with AI assistance OFF',
+        snippet: 'Verified verbatim quote transcribed directly during manual paper reading.',
+        createdBy: 'Lead Researcher (Manual)',
+        isResearcherVerified: true,
+        researcherNotes: 'Identified manually on Page 8 Table 4 during deep qualitative reading.',
+        topic: 'Manual Qualitative Review',
+        relationship: 'supports',
+      });
+
+      expect([200, 201]).toContain(manualRes.status);
+      const manualData = await manualRes.json();
+      const id = manualData.evidence.id;
+
+      try {
+        const getRes = await callGet(`projectId=${projectId}&search=${encodeURIComponent('Manual qualitative')}`);
+        const list = (await getRes.json()).evidence;
+        const found = list.find((e: any) => e.id === id);
+        expect(found).toBeDefined();
+        expect(found.createdBy).toContain('Manual');
+        expect(found.isResearcherVerified).toBe(true);
+        expect(found.researcherNotes).toContain('Identified manually');
+      } finally {
+        await callDelete(id);
+      }
+    });
+
+    it('guarantees that paper comparison and matrix can still access evidence snippets', () => {
+      const projectEvidence = db.getEvidence(projectId);
+      expect(projectEvidence.length).toBeGreaterThan(0);
+
+      // Ensure every evidence record contains required properties for matrix and comparison
+      projectEvidence.forEach((e) => {
+        expect(e.id).toBeTruthy();
+        expect(e.claim).toBeTruthy();
+        expect(e.paperId).toBeTruthy();
+        expect(e.snippet).toBeTruthy();
+        expect(e.verificationStatus).toBeTruthy();
+      });
+    });
+  });
 });
+
