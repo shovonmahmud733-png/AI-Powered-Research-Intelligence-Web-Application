@@ -19,6 +19,11 @@ export interface ProviderHealthStatus {
   message: string;
 }
 
+export interface ChatTurn {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
 export type TaskCategory =
   | 'summarization'
   | 'extraction'
@@ -41,6 +46,7 @@ export interface LLMRequest {
   };
   temperature?: number;
   maxTokens?: number;
+  history?: ChatTurn[];
 }
 
 export interface GroundedEvidenceItem {
@@ -68,7 +74,7 @@ export interface LLMProvider {
 }
 
 // 1. Offline Academic Engine (zero-key fallback with deterministic extraction)
-class OfflineAcademicEngine implements LLMProvider {
+export class OfflineAcademicEngine implements LLMProvider {
   name = 'Academic Local Reasoning Engine';
 
   isAvailable(): boolean {
@@ -76,8 +82,66 @@ class OfflineAcademicEngine implements LLMProvider {
   }
 
   async generate(req: LLMRequest): Promise<LLMResponse> {
+    const rawQuery = (req.userQuery || req.prompt || '').trim();
+    const qLower = rawQuery.toLowerCase();
     const chunks = req.retrievedChunks || [];
+    const paperTitle = req.paperMetadata?.title || 'the indexed paper';
 
+    // A. Greeting & Capability Queries
+    const isGreeting =
+      /^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|howdy)\b/i.test(rawQuery) ||
+      /\b(what can you do|who are you|how can you help|introduce yourself|capabilities)\b/i.test(rawQuery);
+
+    if (isGreeting) {
+      return {
+        answer: `Hello! I am your **Research Copilot**, an evidence-grounded academic research partner.
+
+I can assist you with:
+• **Paper Summarization & Synthesis**: Understand research objectives, methodology, datasets, models, and findings across your uploaded papers.
+• **Limitations & Future Work**: Inspect documented constraints, architectural bottlenecks, and prospective research directions.
+• **Paper Comparison & Contradictions**: Compare empirical trade-offs and resolve conflicting findings across studies.
+• **Evidence Verification & Tracing**: Check claims against exact source passages with verified page numbers and section citations.
+
+You can select a paper from the library or ask any research question to begin!`,
+        evidence: [],
+        modelUsed: 'offline-academic-reasoner-v1',
+        provider: 'Local Reasoning Engine',
+      };
+    }
+
+    // B. General Scientific / AI Definitions (when not matching paper chunks)
+    const isGeneralConcept =
+      /^(what is|define|explain|how does)\s+(a\s+|an\s+|the\s+)?(neural network|deep learning|machine learning|artificial intelligence|precision|recall|f1 score|overfitting|gradient descent|transformer|cross[- ]entropy|roc[- ]auc|nlp|natural language processing)/i.test(qLower);
+
+    if (isGeneralConcept && chunks.every((c) => c.score < 0.25)) {
+      let conceptDefinition = '';
+      if (/neural network/i.test(qLower)) {
+        conceptDefinition = `A **Neural Network** is a computational learning model inspired by biological neural circuits. It consists of layers of interconnected nodes (neurons): an input layer, one or more hidden layers, and an output layer. Each connection has an associated weight and bias adjusted during training via backpropagation and gradient descent to model complex non-linear relationships.`;
+      } else if (/deep learning/i.test(qLower)) {
+        conceptDefinition = `**Deep Learning** is a subset of machine learning based on artificial neural networks with multiple layers (deep architectures). It enables automatic hierarchical representation learning from raw data without manual feature engineering.`;
+      } else if (/machine learning/i.test(qLower)) {
+        conceptDefinition = `**Machine Learning (ML)** is a field of artificial intelligence focused on building algorithms that learn patterns and rules directly from empirical data to make predictions or decisions without being explicitly programmed.`;
+      } else if (/transformer/i.test(qLower)) {
+        conceptDefinition = `A **Transformer** is a deep learning architecture introduced by Vaswani et al. (2017) based on self-attention mechanisms, dispensing with recurrence and convolutions. Transformers process sequence elements in parallel and dynamically compute relevance weights across all tokens.`;
+      } else if (/precision|recall|f1/i.test(qLower)) {
+        conceptDefinition = `In statistical classification:\n• **Precision**: Proportion of true positive predictions among all positive predictions (\\(\\frac{TP}{TP + FP}\\)).\n• **Recall**: Proportion of actual positive instances correctly identified (\\(\\frac{TP}{TP + FN}\\)).\n• **F1 Score**: The harmonic mean of precision and recall (\\(2 \\times \\frac{\\text{Precision} \\times \\text{Recall}}{\\text{Precision} + \\text{Recall}}\\)), balancing both metrics on imbalanced datasets.`;
+      } else if (/overfitting/i.test(qLower)) {
+        conceptDefinition = `**Overfitting** occurs when a machine learning model learns spurious noise and specific fluctuations of the training data rather than underlying generalized patterns, causing high training performance but poor generalization on unseen test data.`;
+      } else if (/gradient descent/i.test(qLower)) {
+        conceptDefinition = `**Gradient Descent** is an iterative first-order optimization algorithm for finding the local minimum of a differentiable objective function by updating parameters in the opposite direction of the gradient with respect to a learning rate.`;
+      } else {
+        conceptDefinition = `This concept is a foundational principle in machine learning and computer science. In empirical research, its configuration and performance depend on the specific architectural design and training regime.`;
+      }
+
+      return {
+        answer: `${conceptDefinition}\n\n*Note: This is a foundational academic definition. To examine empirical findings, architectures, or benchmark results from your uploaded papers, ask a question referencing the paper or research topic.*`,
+        evidence: [],
+        modelUsed: 'offline-academic-reasoner-v1',
+        provider: 'Local Reasoning Engine',
+      };
+    }
+
+    // C. Document-grounded reasoning
     if (chunks.length === 0) {
       return {
         answer:
@@ -96,10 +160,7 @@ class OfflineAcademicEngine implements LLMProvider {
       similarityScore: Math.round(c.score * 100),
     }));
 
-    // Generate grounded synthesis
     let synthesis = '';
-    const qLower = (req.userQuery || req.prompt).toLowerCase();
-    const paperTitle = req.paperMetadata?.title || 'the indexed paper';
 
     if (qLower.includes('limitation') || qLower.includes('limit') || qLower.includes('drawback') || qLower.includes('bottleneck')) {
       const meaningfulChunks = chunks.filter(
@@ -149,11 +210,13 @@ class OfflineAcademicEngine implements LLMProvider {
         .join('\n\n')}\n\n**Methodological Root Cause**: Discrepancies commonly arise from differences in benchmark datasets, evaluation metrics, and hyperparameter calibrations.`;
     } else if (qLower.includes('evidence') || qLower.includes('verify') || qLower.includes('claim')) {
       synthesis = `Grounded evidence verification from the project library:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\n**Evidence Grounding**:\n- **Source Section**: ${primaryChunk.chunk.sectionName}\n- **Page Number**: ${primaryChunk.chunk.pageNumber}\n- **Confidence**: High (${Math.round(primaryChunk.score * 100)}% retrieval confidence)\n- **Verification Status**: Empirically documented in published manuscript.`;
-    } else if (qLower.includes('dataset') || qLower.includes('corpus') || qLower.includes('data')) {
+    } else if (qLower.includes('dataset') || qLower.includes('corpus') || qLower.includes('data') || qLower.includes('utterance')) {
       const dataChunk =
-        chunks.find((c) => /data|corpus|collect|curat/i.test(c.chunk.sectionName) && !/limit|threat/i.test(c.chunk.sectionName)) ||
+        chunks.find((c) => /dataset|corpus\s*setup|dataset\s*construct/i.test(c.chunk.sectionName)) ||
+        chunks.find((c) => /data\s*construct|curat/i.test(c.chunk.sectionName)) ||
+        chunks.find((c) => /data|corpus/i.test(c.chunk.sectionName) && !/preprocess|clean|limit|threat/i.test(c.chunk.sectionName)) ||
         chunks.find((c) => /data|corpus/i.test(c.chunk.sectionName)) ||
-        chunks.find((c) => !/limit|threat/i.test(c.chunk.sectionName) && (/data|corpus|dataset/i.test(c.chunk.content))) ||
+        chunks.find((c) => !/limit|threat/i.test(c.chunk.sectionName) && (/data|corpus|dataset|utterance|sample|item/i.test(c.chunk.content))) ||
         chunks.find((c) => !/limit|threat/i.test(c.chunk.sectionName)) ||
         chunks[0];
       if (dataChunk) {
@@ -219,10 +282,11 @@ class OfflineAcademicEngine implements LLMProvider {
         synthesis = `Insufficient evidence in the selected paper regarding future work recommendations.`;
         evidenceList.length = 0;
       }
-    } else if (primaryChunk.score >= 0.25 || qLower.includes('summar') || qLower.includes('about') || qLower.includes('what') || qLower.includes('overview')) {
-      synthesis = `Regarding your inquiry on *" ${req.prompt} "*:\n\nDirect evidence from **${primaryChunk.chunk.sectionName}** (Page ${primaryChunk.chunk.pageNumber}) of **${paperTitle}** states:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\nThis passage provides the primary grounding for the investigation within the retrieved paper content.`;
+    } else if (primaryChunk.score >= 0.25 || /^(summar|overview|synopsis|tell me about|what is this paper|what does this paper)/i.test(qLower)) {
+      const displayQuery = req.userQuery ? `"${req.userQuery}"` : 'your research inquiry';
+      synthesis = `Regarding your inquiry on ${displayQuery}:\n\nDirect evidence from **${primaryChunk.chunk.sectionName}** (Page ${primaryChunk.chunk.pageNumber}) of **${paperTitle}** states:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\nThis passage provides the primary grounding for the investigation within the retrieved paper content.`;
     } else {
-      synthesis = `Insufficient evidence in the selected paper regarding this inquiry. No matching empirical passages were located.`;
+      synthesis = `Insufficient evidence in ${paperTitle} regarding this inquiry. No matching empirical passages or documented details were located.`;
       evidenceList.length = 0;
     }
 
@@ -301,7 +365,6 @@ export class OpenAIProvider implements LLMProvider {
 
     try {
       const client = this.getClient();
-      // Verify connectivity and model accessibility
       await client.models.retrieve(model);
 
       return {
@@ -390,7 +453,7 @@ export class OpenAIProvider implements LLMProvider {
     let answer = '';
     let usageData: { promptTokens: number; completionTokens: number } | undefined;
 
-    // Prefer the Responses API for newer SDK integrations, falling back to chat completions if model/endpoint requires
+    // Prefer Responses API for newer SDK integrations, falling back to chat completions if needed
     try {
       const response = await client.responses.create({
         model,
@@ -416,7 +479,7 @@ export class OpenAIProvider implements LLMProvider {
         };
       }
     } catch (responsesErr: any) {
-      // Re-throw fatal client errors (auth, quota, rate-limit, network) without retrying completions
+      // Re-throw fatal client errors without retrying completions
       if (
         responsesErr instanceof OpenAI.AuthenticationError ||
         responsesErr instanceof OpenAI.PermissionDeniedError ||
@@ -427,14 +490,28 @@ export class OpenAIProvider implements LLMProvider {
         this.handleOpenAIError(responsesErr, model);
       }
 
-      // If Responses API is not supported by model, try chat completions API
+      // Fall back to chat completions API with multi-turn support
       try {
+        const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+          { role: 'system', content: systemPrompt },
+        ];
+
+        if (req.history && req.history.length > 0) {
+          for (const turn of req.history.slice(-8)) {
+            if (turn.role === 'user' || turn.role === 'assistant' || turn.role === 'system') {
+              messages.push({
+                role: turn.role,
+                content: turn.content,
+              });
+            }
+          }
+        }
+
+        messages.push({ role: 'user', content: userPrompt });
+
         const completion = await client.chat.completions.create({
           model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
+          messages,
           temperature: req.temperature ?? 0.2,
         });
 
@@ -465,32 +542,129 @@ export class OpenAIProvider implements LLMProvider {
   }
 }
 
-// 3. Google Gemini Provider (when GEMINI_API_KEY or GOOGLE_API_KEY is available)
-class GoogleGeminiProvider implements LLMProvider {
+// 3. Groq Provider (free-tier, ultra-fast Llama-3.3-70B inference)
+export class GroqProvider implements LLMProvider {
+  name = 'Groq';
+
+  isAvailable(): boolean {
+    return Boolean(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim().length > 0);
+  }
+
+  getModel(): string {
+    return process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  }
+
+  async generate(req: LLMRequest): Promise<LLMResponse> {
+    const apiKey = process.env.GROQ_API_KEY;
+    const model = this.getModel();
+
+    if (!apiKey) {
+      throw new Error('Groq API key is missing. Set GROQ_API_KEY in environment variables.');
+    }
+
+    const systemPrompt =
+      req.systemPrompt ||
+      'You are a rigorous academic research assistant. Ground all statements strictly in the provided paper context. If evidence is insufficient, state: "Insufficient evidence in the selected paper."';
+
+    const messages: { role: string; content: string }[] = [
+      { role: 'system', content: systemPrompt },
+    ];
+
+    if (req.history && req.history.length > 0) {
+      for (const turn of req.history.slice(-8)) {
+        messages.push({ role: turn.role, content: turn.content });
+      }
+    }
+
+    messages.push({ role: 'user', content: req.prompt });
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: req.temperature ?? 0.2,
+        max_tokens: req.maxTokens ?? 1500,
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw new Error(`Groq API Error (${res.status}): ${errBody || res.statusText}`);
+    }
+
+    const data = await res.json();
+    const answer = data.choices?.[0]?.message?.content || 'No response returned from Groq model.';
+
+    return {
+      answer,
+      evidence: (req.retrievedChunks || []).map((c) => ({
+        page: c.chunk.pageNumber,
+        section: c.chunk.sectionName,
+        snippet: c.chunk.content.substring(0, 300) + '...',
+        similarityScore: Math.round(c.score * 100),
+      })),
+      modelUsed: model,
+      provider: 'Groq',
+      usage: data.usage
+        ? {
+            promptTokens: data.usage.prompt_tokens || 0,
+            completionTokens: data.usage.completion_tokens || 0,
+          }
+        : undefined,
+    };
+  }
+}
+
+// 4. Google Gemini Provider (free-tier gemini-1.5-flash with multi-turn support)
+export class GoogleGeminiProvider implements LLMProvider {
   name = 'Google Gemini';
 
   isAvailable(): boolean {
-    return Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+    return Boolean(
+      (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 0) ||
+      (process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY.trim().length > 0)
+    );
+  }
+
+  getModel(): string {
+    return process.env.GEMINI_MODEL || 'gemini-1.5-flash';
   }
 
   async generate(req: LLMRequest): Promise<LLMResponse> {
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-    const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    const model = this.getModel();
 
-    const evidenceContext = (req.retrievedChunks || [])
-      .map(
-        (c) =>
-          `[PAGE ${c.chunk.pageNumber} | SECTION: ${c.chunk.sectionName}]\n${c.chunk.content}`
-      )
-      .join('\n\n---\n\n');
+    if (!apiKey) {
+      throw new Error('Gemini API key is missing. Set GEMINI_API_KEY or GOOGLE_API_KEY.');
+    }
 
-    const promptText = `${req.systemPrompt || 'You are an evidence-grounded academic research assistant. Ground all statements strictly in the provided paper context. If evidence is unavailable, state: "Insufficient evidence in the current research library."'}
+    const systemInstructionText =
+      req.systemPrompt ||
+      'You are an evidence-grounded academic research assistant. Ground all statements strictly in the provided paper context. If evidence is unavailable, state: "Insufficient evidence in the current research library."';
 
-Paper Context:
-${evidenceContext}
+    const contents: { role: string; parts: { text: string }[] }[] = [];
 
-Researcher Inquiry:
-${req.prompt}`;
+    // Add multi-turn history
+    if (req.history && req.history.length > 0) {
+      for (const turn of req.history.slice(-8)) {
+        if (turn.role === 'user' || turn.role === 'assistant') {
+          contents.push({
+            role: turn.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: turn.content }],
+          });
+        }
+      }
+    }
+
+    contents.push({
+      role: 'user',
+      parts: [{ text: req.prompt }],
+    });
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -498,7 +672,10 @@ ${req.prompt}`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText }] }],
+          systemInstruction: {
+            parts: [{ text: systemInstructionText }],
+          },
+          contents,
           generationConfig: {
             temperature: req.temperature ?? 0.2,
             maxOutputTokens: req.maxTokens ?? 1500,
@@ -508,7 +685,8 @@ ${req.prompt}`;
     );
 
     if (!res.ok) {
-      throw new Error(`Gemini API error: ${res.statusText}`);
+      const errText = await res.text();
+      throw new Error(`Gemini API error (${res.status}): ${errText || res.statusText}`);
     }
 
     const data = await res.json();
@@ -530,26 +708,33 @@ ${req.prompt}`;
   }
 }
 
-// 4. Anthropic Claude Provider (when ANTHROPIC_API_KEY is available)
-class AnthropicProvider implements LLMProvider {
+// 5. Anthropic Claude Provider (when ANTHROPIC_API_KEY is available)
+export class AnthropicProvider implements LLMProvider {
   name = 'Anthropic Claude';
 
   isAvailable(): boolean {
-    return Boolean(process.env.ANTHROPIC_API_KEY);
+    return Boolean(process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY.trim().length > 0);
+  }
+
+  getModel(): string {
+    return process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
   }
 
   async generate(req: LLMRequest): Promise<LLMResponse> {
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    const model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+    const model = this.getModel();
 
-    const evidenceContext = (req.retrievedChunks || [])
-      .map(
-        (c) =>
-          `[PAGE ${c.chunk.pageNumber} | SECTION: ${c.chunk.sectionName}]\n${c.chunk.content}`
-      )
-      .join('\n\n---\n\n');
+    const messages: { role: string; content: string }[] = [];
 
-    const promptWithContext = `Paper Context:\n${evidenceContext}\n\nResearcher Question: ${req.prompt}\n\nPlease answer concisely and objectively, citing exact page numbers and sections from the context. Do not invent citations.`;
+    if (req.history && req.history.length > 0) {
+      for (const turn of req.history.slice(-8)) {
+        if (turn.role === 'user' || turn.role === 'assistant') {
+          messages.push({ role: turn.role, content: turn.content });
+        }
+      }
+    }
+
+    messages.push({ role: 'user', content: req.prompt });
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -565,12 +750,13 @@ class AnthropicProvider implements LLMProvider {
         system:
           req.systemPrompt ||
           'You are a rigorous academic research assistant. Ground all statements strictly in the provided paper context.',
-        messages: [{ role: 'user', content: promptWithContext }],
+        messages,
       }),
     });
 
     if (!res.ok) {
-      throw new Error(`Anthropic API error: ${res.statusText}`);
+      const errText = await res.text();
+      throw new Error(`Anthropic API error (${res.status}): ${errText || res.statusText}`);
     }
 
     const data = await res.json();
@@ -591,25 +777,34 @@ class AnthropicProvider implements LLMProvider {
   }
 }
 
-// 5. Multi-LLM Router
+// 6. Multi-LLM Router
 export class ModelRouter {
   private providers: LLMProvider[] = [
     new OpenAIProvider(),
+    new GroqProvider(),
     new GoogleGeminiProvider(),
     new AnthropicProvider(),
     new OfflineAcademicEngine(),
   ];
 
   selectProvider(task: TaskCategory): LLMProvider {
-    // If OPENAI_API_KEY is configured, prioritize the official OpenAI provider
+    // 1. If OPENAI_API_KEY is configured, prioritize official OpenAI provider
     const openAi = this.providers.find((p) => p.name === 'OpenAI' && p.isAvailable());
     if (openAi) return openAi;
 
-    // If another external key exists and is available, use it
-    const external = this.providers.find((p) => p.name !== 'Academic Local Reasoning Engine' && p.isAvailable());
-    if (external) return external;
+    // 2. If Groq is configured, use ultra-fast Llama-3.3-70B
+    const groq = this.providers.find((p) => p.name === 'Groq' && p.isAvailable());
+    if (groq) return groq;
 
-    // Fallback to offline academic reasoning engine
+    // 3. If Google Gemini is configured, use Gemini
+    const gemini = this.providers.find((p) => p.name === 'Google Gemini' && p.isAvailable());
+    if (gemini) return gemini;
+
+    // 4. If Anthropic Claude is configured, use Claude
+    const claude = this.providers.find((p) => p.name === 'Anthropic Claude' && p.isAvailable());
+    if (claude) return claude;
+
+    // 5. Zero-key deterministic fallback
     return this.providers.find((p) => p.name === 'Academic Local Reasoning Engine')!;
   }
 
@@ -626,6 +821,32 @@ export class ModelRouter {
   }
 }
 
+export async function checkActiveProviderHealth(): Promise<ProviderHealthStatus> {
+  const router = new ModelRouter();
+  const active = router.selectProvider('rag_qa');
+
+  if (active instanceof OpenAIProvider) {
+    return await active.checkHealth();
+  }
+
+  if (active.name === 'Academic Local Reasoning Engine') {
+    return {
+      status: 'missing_credentials',
+      configured: false,
+      provider: 'Local Reasoning Engine',
+      model: 'offline-academic-reasoner-v1',
+      message: 'No external LLM API key configured. Operating in zero-key offline academic mode.',
+    };
+  }
+
+  return {
+    status: 'connected',
+    configured: true,
+    provider: active.name,
+    model: (active as any).getModel ? (active as any).getModel() : 'default',
+    message: `${active.name} provider configured and ready.`,
+  };
+}
+
 export const openAIProvider = new OpenAIProvider();
 export const modelRouter = new ModelRouter();
-

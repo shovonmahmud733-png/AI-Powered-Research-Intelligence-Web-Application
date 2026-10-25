@@ -41,6 +41,27 @@ export class ResearchChatEngine {
 
     const isSinglePaper = scope === 'paper' && Boolean(paperId) && !searchAcrossLibrary;
 
+    // Fast-path Greeting & Capabilities detection
+    const isGreeting =
+      /^(hi|hello|hey|greetings|good\s+(morning|afternoon|evening)|howdy)\b/i.test(userMessage.trim()) ||
+      /\b(what can you do|who are you|how can you help|introduce yourself|capabilities)\b/i.test(userMessage.trim());
+
+    if (isGreeting) {
+      const response = await modelRouter.execute({
+        task: 'writing_assistance',
+        prompt: userMessage,
+        userQuery: userMessage,
+        systemPrompt:
+          'You are Research Copilot, an evidence-grounded academic research partner. Greet the researcher warmly, professionally, and succinctly summarize how you can help them analyze papers, compare methodologies, inspect limitations, and verify claims.',
+        history: history.map((h) => ({ role: h.role as 'user' | 'assistant', content: h.content })),
+      });
+      return {
+        content: response.answer,
+        sources: [],
+        modelUsed: response.modelUsed,
+      };
+    }
+
     const project = db.getProjectById(projectId);
     let papers = db.getPapers(projectId);
 
@@ -125,7 +146,16 @@ export class ResearchChatEngine {
       }
     } else {
       // Project Scope: Chunks MUST belong to active projectId
-      candidateChunks = db.getChunksByProject(projectId);
+      const dbChunks = db.getChunksByProject(projectId);
+      const seenChunkIds = new Set<string>();
+      candidateChunks = [];
+      for (const c of dbChunks) {
+        const cid = c.id || c.chunk_id || '';
+        if (cid && !seenChunkIds.has(cid)) {
+          seenChunkIds.add(cid);
+          candidateChunks.push(c);
+        }
+      }
       if (clientChunks && clientChunks.length > 0) {
         const projectPaperIds = new Set(papers.map((p) => p.id));
         const filteredClientChunks = clientChunks.filter(
@@ -135,9 +165,12 @@ export class ResearchChatEngine {
             c.projectId === projectId ||
             c.project_id === projectId
         );
-        const existingIds = new Set(candidateChunks.map((c) => c.id));
         filteredClientChunks.forEach((c) => {
-          if (!existingIds.has(c.id)) candidateChunks.push(c);
+          const cid = c.id || c.chunk_id || '';
+          if (cid && !seenChunkIds.has(cid)) {
+            seenChunkIds.add(cid);
+            candidateChunks.push(c);
+          }
         });
       }
 
@@ -166,8 +199,18 @@ export class ResearchChatEngine {
       }
     }
 
+    // In multi-turn chat, enrich retrieval query with last user turn when follow-up pronouns are used
+    let retrievalQuery = userMessage;
+    const hasPronouns = /\b(it|its|they|them|their|this|that|these|those)\b/i.test(userMessage);
+    if (hasPronouns && history.length > 0) {
+      const lastUserTurn = [...history].reverse().find((h) => h.role === 'user');
+      if (lastUserTurn && lastUserTurn.content) {
+        retrievalQuery = `${lastUserTurn.content} ${userMessage}`;
+      }
+    }
+
     // 2. Perform Hybrid Retrieval on candidateChunks
-    const scoredChunks = vectorStore.retrieveRelevantChunks(candidateChunks, userMessage, 5);
+    const scoredChunks = vectorStore.retrieveRelevantChunks(candidateChunks, retrievalQuery, 5);
 
     // 3. WRONG DOCUMENT PROTECTION: Validate every retrieved chunk before LLM
     const validatedChunks: ScoredChunk[] = [];
@@ -250,12 +293,22 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
     }
 
     const qLower = userMessage.toLowerCase();
+    const isGeneralConcept =
+      !isSinglePaper &&
+      /^(what is|define|explain|how does)\s+(a\s+|an\s+|the\s+)?(neural network|deep learning|machine learning|artificial intelligence|precision|recall|f1 score|overfitting|gradient descent|transformer|cross[- ]entropy|roc[- ]auc|nlp|natural language processing)/i.test(userMessage.trim());
+
     const isLimitationQuery =
       qLower.includes('limitation') ||
       qLower.includes('limit') ||
       qLower.includes('drawback') ||
       qLower.includes('bottleneck') ||
       qLower.includes('constraint');
+
+    const isDatasetQuery =
+      qLower.includes('dataset') ||
+      qLower.includes('corpus') ||
+      qLower.includes('data') ||
+      qLower.includes('utterance');
 
     const isOverviewQuery =
       (qLower.includes('summar') || qLower.includes('overview') || qLower.includes('tell me about')) &&
@@ -283,6 +336,9 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
     const sources: ChatSourceItem[] = [];
 
     validatedChunks.forEach((sc) => {
+      // Avoid attaching chunks with zero relevance to the user sources drawer
+      if (sc.score < 0.15 && !isOverviewQuery) return;
+
       const c = sc.chunk;
       const cPaperId = c.paperId || c.paper_id;
       const paper = papers.find((p) => p.id === cPaperId);
@@ -375,6 +431,36 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
       });
     }
 
+    // Add structured dataset sources ONLY if matching the authorized paper/project
+    if (isDatasetQuery) {
+      projectMatrix.forEach((m) => {
+        if (m.dataset && (!isSinglePaper || m.paperId === paperId)) {
+          const p = papers.find((paper) => paper.id === m.paperId);
+          sources.push({
+            paperId: m.paperId,
+            paper_id: m.paperId,
+            paperTitle: m.paperTitle,
+            page: 1,
+            page_number: 1,
+            section: 'Dataset (Empirical Matrix)',
+            snippet: normalizeExtractedText(`Dataset: ${m.dataset}`),
+            sourceType: 'evidence',
+            similarityScore: 95,
+            userId: project?.userId || userId,
+            user_id: project?.userId || userId,
+            projectId: projectId,
+            project_id: projectId,
+            documentId: `doc-${m.paperId}`,
+            document_id: `doc-${m.paperId}`,
+            chunkId: `matrix-data-${m.id}`,
+            chunk_id: `matrix-data-${m.id}`,
+            sourceFilename: p?.pdfFileName || `${m.paperTitle}.pdf`,
+            source_filename: p?.pdfFileName || `${m.paperTitle}.pdf`,
+          });
+        }
+      });
+    }
+
     relevantEvidence.slice(0, 2).forEach((ev) => {
       if (!isSinglePaper || ev.paperId === paperId) {
         const p = papers.find((paper) => paper.id === ev.paperId);
@@ -415,18 +501,21 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
     }
 
     // 6. Evidence Grounding Check: Ensure answer only generated when valid evidence exists
+    const topScore = validatedChunks.length > 0 ? validatedChunks[0].score : 0;
     const hasSufficientEvidence =
-      validatedChunks.length > 0 &&
-      (
-        (validatedChunks[0].score >= 0.15) ||
-        relevantEvidence.length > 0 ||
-        (isLimitationQuery && (
-          projectMatrix.some((m) => m.limitation) ||
-          paperAnalyses.some((a: any) => a?.limitations?.length > 0) ||
-          validatedChunks.some((vc) => /limit|constraint|restrict|bottleneck/i.test(vc.chunk.content) || /limit/i.test(vc.chunk.sectionName || vc.chunk.section || ''))
-        )) ||
-        isOverviewQuery
-      );
+      (topScore >= 0.15) ||
+      relevantEvidence.length > 0 ||
+      (isLimitationQuery && (
+        projectMatrix.some((m) => m.limitation) ||
+        paperAnalyses.some((a: any) => a?.limitations?.length > 0) ||
+        validatedChunks.some((vc) => /limit|constraint|restrict|bottleneck/i.test(vc.chunk.content) || /limit/i.test(vc.chunk.sectionName || vc.chunk.section || ''))
+      )) ||
+      (isDatasetQuery && (
+        projectMatrix.some((m) => m.dataset && (!isSinglePaper || m.paperId === paperId)) ||
+        validatedChunks.some((vc) => /data|corpus|dataset|utterance|sample/i.test(vc.chunk.content) || /data|corpus/i.test(vc.chunk.sectionName || ''))
+      )) ||
+      isOverviewQuery ||
+      isGeneralConcept;
 
     if (!hasSufficientEvidence) {
       const scopeLabel = isSinglePaper
@@ -473,7 +562,7 @@ Active Research Questions:
 ${project?.researchQuestions?.map((q) => `- [${q.status.toUpperCase()}] ${q.question}`).join('\n') || 'None recorded'}
 
 ${recentHistory ? `Conversation History:\n${recentHistory}\n\n---\n\n` : ''}Retrieved Paper Chunks:
-${validatedChunks.map((sc) => `[Source: ${papers.find((p) => p.id === (sc.chunk.paperId || sc.chunk.paper_id))?.title || sc.chunk.sourceFilename || 'Paper'} | Page ${sc.chunk.pageNumber} | Section: ${sc.chunk.sectionName || sc.chunk.section}]\n${sc.chunk.content}`).join('\n\n---\n\n')}
+${validatedChunks.filter((c) => c.score >= 0.15 || isOverviewQuery).map((sc) => `[Source: ${papers.find((p) => p.id === (sc.chunk.paperId || sc.chunk.paper_id))?.title || sc.chunk.sourceFilename || 'Paper'} | Page ${sc.chunk.pageNumber} | Section: ${sc.chunk.sectionName || sc.chunk.section}]\n${sc.chunk.content}`).join('\n\n---\n\n')}
 
 Structured Literature Matrix:
 ${projectMatrix.map((m) => `• [${m.paperTitle}]: Dataset -> ${m.dataset} | Method -> ${m.method} | Result -> ${m.result} | Limitation -> ${m.limitation}`).join('\n')}
@@ -495,8 +584,11 @@ Please formulate an evidence-backed, rigorous research answer citing exact pages
       prompt: promptPayload,
       userQuery: userMessage,
       systemPrompt,
-      retrievedChunks: validatedChunks,
+      retrievedChunks: validatedChunks.filter((c) => c.score >= 0.15 || isOverviewQuery),
       paperMetadata: primaryPaper ? { title: primaryPaper.title } : undefined,
+      history: (history || [])
+        .filter((h) => h.content && h.content.trim())
+        .map((h) => ({ role: h.role as 'user' | 'assistant', content: h.content })),
     });
 
     return {

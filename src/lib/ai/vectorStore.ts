@@ -1,4 +1,5 @@
 import { DocumentChunk } from '../db/types';
+import { normalizeExtractedText } from '../pdf/parser';
 
 export interface ScoredChunk {
   chunk: DocumentChunk;
@@ -50,13 +51,18 @@ export class VectorStore {
     const queryTokens = cleanTokens(query);
     const queryStems = queryTokens.map(getStem);
 
-    // If query is very generic ("summarize", "tell me about this paper"), provide first informative chunks
+    // If query contains no informative tokens, only return baseline chunks if explicitly asking for an overview of the paper
     if (queryTokens.length === 0) {
-      return chunks.slice(0, topK).map((c) => ({
-        chunk: c,
-        score: 0.75,
-        highlightSnippets: [c.content.substring(0, 200) + '...'],
-      }));
+      const qLower = query.toLowerCase().trim();
+      const isOverview = /^(summar|overview|synopsis|tell me about|what is this paper|what does this paper)/i.test(qLower);
+      if (isOverview) {
+        return chunks.slice(0, topK).map((c, i) => ({
+          chunk: c,
+          score: 0.65 - i * 0.05,
+          highlightSnippets: [c.content.substring(0, 200) + '...'],
+        }));
+      }
+      return [];
     }
 
     const queryFreq: Record<string, number> = {};
@@ -70,7 +76,8 @@ export class VectorStore {
     const chunkStemsList: string[][] = [];
 
     chunks.forEach((c) => {
-      const tokens = cleanTokens(c.content + ' ' + (c.sectionName || c.section || ''));
+      const normalizedContent = normalizeExtractedText(c.content || '');
+      const tokens = cleanTokens(normalizedContent + ' ' + (c.sectionName || c.section || ''));
       const stems = tokens.map(getStem);
       chunkTokensList.push(tokens);
       chunkStemsList.push(stems);
@@ -127,16 +134,21 @@ export class VectorStore {
       const isResultQuery = /result|evaluat|metric|accuracy|f1|score|finding|outperform|baseline|table/i.test(qLower);
 
       if (isDatasetQuery) {
-        if (/data|corpus|preprocess|collect|curat|resource/i.test(sectionLower)) {
-          tfidfScore += 2.5;
+        if (/dataset|corpus\s*setup|dataset\s*construct/i.test(sectionLower)) {
+          tfidfScore += 3.5;
+          matchedTokensCount += 3;
+        } else if (/data|corpus|preprocess|collect|curat|resource/i.test(sectionLower)) {
+          tfidfScore += 2.0;
           matchedTokensCount += 2;
         } else if (/limit|threat/i.test(sectionLower)) {
           tfidfScore = Math.max(0, tfidfScore - 1.5);
         }
       } else if (isLimitationQuery) {
         if (/limit|threat|constraint/i.test(sectionLower)) {
-          tfidfScore += 2.5;
-          matchedTokensCount += 2;
+          tfidfScore += 3.5;
+          matchedTokensCount += 3;
+        } else {
+          tfidfScore = Math.max(0, tfidfScore - 1.5);
         }
       } else if (isMethodQuery) {
         if (/method|approach|architect|model|framework|algorithm/i.test(sectionLower)) {
@@ -174,8 +186,9 @@ export class VectorStore {
           : Math.min(0.99, Math.max(0.35, tfidfScore * 5));
 
       // Extract best snippet containing query terms or stems
-      const sentences = chunk.content.split(/(?<=[.?!])\s+/);
-      let bestSnippet = chunk.content.substring(0, 220) + '...';
+      const normalizedChunkContent = normalizeExtractedText(chunk.content || '');
+      const sentences = normalizedChunkContent.split(/(?<=[.?!])\s+/);
+      let bestSnippet = normalizedChunkContent.substring(0, 220) + '...';
       let maxTermOverlap = 0;
 
       for (const sentence of sentences) {
@@ -195,14 +208,24 @@ export class VectorStore {
       }
 
       return {
-        chunk,
+        chunk: {
+          ...chunk,
+          content: normalizedChunkContent,
+        },
         score: normalizedScore,
+        rawTfidf: tfidfScore,
+        rawMatchedCount: matchedTokensCount,
         highlightSnippets: [bestSnippet],
       };
     });
 
-    // Sort by descending score
-    scored.sort((a, b) => b.score - a.score);
+    // Sort by descending score with tie-breaking on raw TF-IDF score and token match count
+    scored.sort(
+      (a: any, b: any) =>
+        b.score - a.score ||
+        b.rawTfidf - a.rawTfidf ||
+        b.rawMatchedCount - a.rawMatchedCount
+    );
 
     // If there were query tokens but no matches, check if query was explicitly asking for a summary/overview of the paper itself
     const overviewKeywords = new Set(['summary', 'summarize', 'overview', 'synopsis']);

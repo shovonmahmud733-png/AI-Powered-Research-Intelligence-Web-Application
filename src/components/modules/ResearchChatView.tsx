@@ -311,6 +311,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
           paperId: scope === 'paper' ? selectedPaperId : undefined,
           paperTitle: targetPaper?.title,
           searchAcrossLibrary,
+          history: messages.slice(-10),
         }),
       });
 
@@ -488,6 +489,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
           searchAcrossLibrary,
           clientPapers: papers,
           clientChunks,
+          history: messages.slice(-10),
         }),
       });
 
@@ -557,6 +559,7 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
           scope,
           paperId: scope === 'paper' ? selectedPaperId : undefined,
           searchAcrossLibrary,
+          history: messages.slice(-10),
         }),
       });
 

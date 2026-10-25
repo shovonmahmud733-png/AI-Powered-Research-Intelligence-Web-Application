@@ -29,8 +29,17 @@ export async function POST(req: Request) {
       stream = false,
       clientPapers,
       clientChunks,
+      history: clientHistory,
       aiAssistanceEnabled = true,
     } = body;
+
+    // Input length validation
+    if (typeof content === 'string' && content.length > 10000) {
+      return NextResponse.json(
+        { error: 'Message content exceeds the maximum allowed limit of 10,000 characters.' },
+        { status: 400 }
+      );
+    }
 
     // Phase 3 & 6: Preserve AI OFF mode behavior
     if (aiAssistanceEnabled === false) {
@@ -89,8 +98,12 @@ export async function POST(req: Request) {
     };
     db.addChatMessage(userMessage);
 
-    // 2. Fetch history
-    const history = db.getChatMessages(sessionId);
+    // 2. Fetch history (combining serverless in-memory db with client history if provided)
+    const dbHistory = db.getChatMessages(sessionId);
+    const history =
+      clientHistory && Array.isArray(clientHistory) && clientHistory.length > 0
+        ? clientHistory.filter((m: any) => m && m.content && m.content.trim())
+        : dbHistory;
 
     // 3. Generate Evidence-Grounded AI Response with Strict Isolation
     const result = await researchChatEngine.generateResponse({

@@ -12,6 +12,7 @@ export async function POST(req: Request) {
       scope = 'project',
       paperId,
       searchAcrossLibrary = false,
+      history: clientHistory,
       aiAssistanceEnabled = true,
     } = await req.json();
 
@@ -26,7 +27,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'sessionId and projectId are required' }, { status: 400 });
     }
 
-    const messages = db.getChatMessages(sessionId);
+    const dbMessages = db.getChatMessages(sessionId);
+    const messages =
+      clientHistory && Array.isArray(clientHistory) && clientHistory.length > 0
+        ? clientHistory
+        : dbMessages;
+
     if (messages.length === 0) {
       return NextResponse.json({ error: 'No messages to regenerate in this session' }, { status: 400 });
     }

@@ -305,12 +305,17 @@ class DatabaseService {
 
   addChunks(chunks: DocumentChunk[]): void {
     this.load();
-    const normalizedChunks = chunks.map((c) => ({
-      ...c,
-      content: normalizeExtractedText(c.content),
-    }));
-    this.data.chunks.push(...normalizedChunks);
-    this.save();
+    const existingIds = new Set(this.data.chunks.map((c) => c.id || (c as any).chunk_id));
+    const normalizedChunks = chunks
+      .filter((c) => !existingIds.has(c.id || (c as any).chunk_id))
+      .map((c) => ({
+        ...c,
+        content: normalizeExtractedText(c.content),
+      }));
+    if (normalizedChunks.length > 0) {
+      this.data.chunks.push(...normalizedChunks);
+      this.save();
+    }
   }
 
   // Structured Paper Analysis
