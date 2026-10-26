@@ -222,20 +222,24 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
   return (
     <div className="space-y-6">
       {/* 1. TOP TIER: EXECUTIVE PROJECT COMMAND BANNER */}
-      <div className="relative overflow-hidden rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 bg-white dark:bg-[#0f1422] p-5 sm:p-7 shadow-xs">
+      <div className="relative overflow-hidden rounded-2xl border border-zinc-200/90 dark:border-zinc-800/80 bg-gradient-to-br from-white via-zinc-50/50 to-zinc-100/40 dark:from-[#0f1422] dark:via-[#0c101c] dark:to-[#080c16] p-5 sm:p-7 shadow-xs">
+        {/* Subtle decorative radial glow */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 bg-blue-500/5 dark:bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
           <div className="space-y-2.5 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-mono uppercase bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md border border-blue-200/60 dark:border-blue-800/60 font-semibold tracking-wider">
+              <span className="text-[10px] font-mono uppercase bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2.5 py-0.5 rounded-md border border-blue-200/60 dark:border-blue-800/60 font-semibold tracking-wider">
                 Research Command Center
               </span>
               {projects.length > 1 && (
                 <div className="relative inline-flex items-center">
-                  <FolderGit2 className="w-3 h-3 text-zinc-400 absolute left-2 pointer-events-none" />
+                  <FolderGit2 className="w-3.5 h-3.5 text-zinc-400 absolute left-2 pointer-events-none" />
                   <select
                     value={currentProject?.id || ''}
                     onChange={(e) => onSelectProject(e.target.value)}
-                    className="text-[11px] font-mono bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md pl-6 pr-5 py-0.5 focus:outline-none cursor-pointer"
+                    aria-label="Select research project"
+                    className="text-[11px] font-mono bg-zinc-100/90 dark:bg-zinc-800/80 hover:bg-zinc-200/60 dark:hover:bg-zinc-700/60 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md pl-6 pr-5 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer transition-colors"
                   >
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -246,7 +250,7 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
                 </div>
               )}
               {currentProject?.researchField && (
-                <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60">
+                <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300 bg-zinc-100/80 dark:bg-zinc-800/80 px-2.5 py-0.5 rounded-md border border-zinc-200/60 dark:border-zinc-700/60">
                   Domain: {currentProject.researchField}
                 </span>
               )}
@@ -257,7 +261,7 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
               )}
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight leading-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-950 dark:text-white tracking-tight leading-tight">
               {currentProject?.title || 'Select or Initialize a Research Project'}
             </h1>
 
@@ -271,15 +275,15 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
               onClick={() => onNavigate('understand', 'chat')}
-              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 rounded-xl text-xs font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer"
+              className="inline-flex items-center space-x-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 rounded-xl text-xs font-semibold shadow-xs hover:shadow-sm active:scale-[0.98] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
-              <Sparkles className="w-4 h-4 text-amber-400 dark:text-amber-600" />
+              <Sparkles className="w-4 h-4 text-amber-400 dark:text-amber-500" />
               <span>Launch Research AI</span>
             </button>
 
             <button
               onClick={() => onNavigate('discover', 'search')}
-              className="inline-flex items-center space-x-2 px-3.5 py-2.5 bg-zinc-100 hover:bg-zinc-200/70 text-zinc-800 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 dark:text-zinc-200 rounded-xl text-xs font-semibold border border-zinc-200 dark:border-zinc-700/80 transition-all cursor-pointer"
+              className="inline-flex items-center space-x-2 px-3.5 py-2.5 bg-zinc-100 hover:bg-zinc-200/70 text-zinc-800 dark:bg-zinc-800/80 dark:hover:bg-zinc-700/80 dark:text-zinc-200 rounded-xl text-xs font-semibold border border-zinc-200 dark:border-zinc-700/80 active:scale-[0.98] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-500/20"
             >
               <Search className="w-3.5 h-3.5 text-zinc-500" />
               <span>Search Literature</span>
@@ -287,7 +291,7 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
 
             <button
               onClick={() => onNavigate('understand', 'papers')}
-              className="inline-flex items-center space-x-2 px-3.5 py-2.5 bg-zinc-100 hover:bg-zinc-200/70 text-zinc-800 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 dark:text-zinc-200 rounded-xl text-xs font-semibold border border-zinc-200 dark:border-zinc-700/80 transition-all cursor-pointer"
+              className="inline-flex items-center space-x-2 px-3.5 py-2.5 bg-zinc-100 hover:bg-zinc-200/70 text-zinc-800 dark:bg-zinc-800/80 dark:hover:bg-zinc-700/80 dark:text-zinc-200 rounded-xl text-xs font-semibold border border-zinc-200 dark:border-zinc-700/80 active:scale-[0.98] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-500/20"
             >
               <Upload className="w-3.5 h-3.5 text-zinc-500" />
               <span>Upload PDF</span>
@@ -301,19 +305,21 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
         {/* Metric 1: Papers */}
         <div
           onClick={() => onNavigate('understand', 'papers')}
-          className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group shadow-2xs"
+          className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 group shadow-2xs"
         >
-          <div className="flex items-center justify-between text-zinc-400 dark:text-zinc-500 mb-2">
-            <BookOpen className="w-4 h-4 text-blue-500" />
-            <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200/50 dark:border-blue-800/40">
+              <BookOpen className="w-4 h-4" />
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <div className="text-xl sm:text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100">
+          <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-zinc-950 dark:text-zinc-50">
             {papers.length}
           </div>
-          <div className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mt-0.5">
+          <div className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 mt-1">
             Papers Cataloged
           </div>
-          <div className="text-[10px] text-zinc-500 font-mono mt-1">
+          <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
             {verifiedPapersCount} verified metadata
           </div>
         </div>
@@ -321,19 +327,21 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
         {/* Metric 2: Evidence */}
         <div
           onClick={() => onNavigate('investigate', 'evidence')}
-          className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group shadow-2xs"
+          className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 group shadow-2xs"
         >
-          <div className="flex items-center justify-between text-zinc-400 dark:text-zinc-500 mb-2">
-            <BookmarkCheck className="w-4 h-4 text-emerald-500" />
-            <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200/50 dark:border-emerald-800/40">
+              <BookmarkCheck className="w-4 h-4" />
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <div className="text-xl sm:text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100">
+          <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-zinc-950 dark:text-zinc-50">
             {stats?.evidenceCount || 0}
           </div>
-          <div className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mt-0.5">
+          <div className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 mt-1">
             Verified Evidence
           </div>
-          <div className="text-[10px] text-zinc-500 font-mono mt-1">
+          <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
             Grounded citations
           </div>
         </div>
@@ -341,19 +349,21 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
         {/* Metric 3: Research Gaps */}
         <div
           onClick={() => onNavigate('investigate', 'gaps')}
-          className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group shadow-2xs"
+          className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 group shadow-2xs"
         >
-          <div className="flex items-center justify-between text-zinc-400 dark:text-zinc-500 mb-2">
-            <Lightbulb className="w-4 h-4 text-amber-500" />
-            <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-200/50 dark:border-amber-800/40">
+              <Lightbulb className="w-4 h-4" />
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <div className="text-xl sm:text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100">
+          <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-zinc-950 dark:text-zinc-50">
             {stats?.gapCount ?? activeGaps.length}
           </div>
-          <div className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mt-0.5">
+          <div className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 mt-1">
             Research Gaps
           </div>
-          <div className="text-[10px] text-zinc-500 font-mono mt-1">
+          <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
             Methodological voids
           </div>
         </div>
@@ -361,19 +371,21 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
         {/* Metric 4: Experiments */}
         <div
           onClick={() => onNavigate('build', 'experiments')}
-          className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group shadow-2xs"
+          className="bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 group shadow-2xs"
         >
-          <div className="flex items-center justify-between text-zinc-400 dark:text-zinc-500 mb-2">
-            <Cpu className="w-4 h-4 text-purple-500" />
-            <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-200/50 dark:border-purple-800/40">
+              <Cpu className="w-4 h-4" />
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <div className="text-xl sm:text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100">
+          <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-zinc-950 dark:text-zinc-50">
             {stats?.experimentCount || 0}
           </div>
-          <div className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mt-0.5">
+          <div className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 mt-1">
             Experiments Tracked
           </div>
-          <div className="text-[10px] text-zinc-500 font-mono mt-1">
+          <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
             Reproducibility runs
           </div>
         </div>
@@ -381,19 +393,21 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
         {/* Metric 5: Research Notes */}
         <div
           onClick={() => onNavigate('write', 'notes')}
-          className="col-span-2 sm:col-span-1 bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-all group shadow-2xs"
+          className="col-span-2 sm:col-span-1 bg-white dark:bg-[#0f1422] border border-zinc-200/80 dark:border-zinc-800/80 rounded-xl p-4 cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 group shadow-2xs"
         >
-          <div className="flex items-center justify-between text-zinc-400 dark:text-zinc-500 mb-2">
-            <FileText className="w-4 h-4 text-cyan-500" />
-            <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-8 h-8 rounded-lg bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-200/50 dark:border-cyan-800/40">
+              <FileText className="w-4 h-4" />
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
           </div>
-          <div className="text-xl sm:text-2xl font-bold font-mono text-zinc-900 dark:text-zinc-100">
+          <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-zinc-950 dark:text-zinc-50">
             {stats?.noteCount || 0}
           </div>
-          <div className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mt-0.5">
+          <div className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 mt-1">
             Synthesis Notes
           </div>
-          <div className="text-[10px] text-zinc-500 font-mono mt-1">
+          <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
             Manuscript drafts
           </div>
         </div>
@@ -518,18 +532,22 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
                 key={idx}
                 type="button"
                 onClick={() => onNavigate(action.stage, action.subView)}
-                className="p-3 rounded-xl border border-zinc-200/70 dark:border-zinc-800/70 bg-zinc-50/60 dark:bg-zinc-900/40 hover:bg-zinc-100/90 dark:hover:bg-zinc-900/80 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all text-left group cursor-pointer space-y-1.5"
+                className="p-3 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-900/40 hover:bg-white dark:hover:bg-zinc-900/90 hover:border-zinc-300 dark:hover:border-zinc-700 hover:-translate-y-0.5 hover:shadow-xs active:scale-[0.98] transition-all text-left group cursor-pointer space-y-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <div className="flex items-center justify-between">
-                  <Icon className={`w-4 h-4 ${action.color}`} />
+                  <div className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700/60 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform">
+                    <Icon className={`w-3.5 h-3.5 ${action.color}`} />
+                  </div>
                   <ArrowRight className="w-3.5 h-3.5 text-zinc-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                 </div>
-                <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                  {action.title}
+                <div>
+                  <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    {action.title}
+                  </div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
+                    {action.desc}
+                  </p>
                 </div>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-1">
-                  {action.desc}
-                </p>
               </button>
             );
           })}
@@ -607,18 +625,21 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
                     <div className="flex items-center space-x-1.5">
                       <button
                         onClick={() => onNavigate('understand', 'chat', paper.id)}
-                        className="inline-flex items-center space-x-1 px-2.5 py-1 text-[11px] font-medium bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300 rounded-md border border-amber-200 dark:border-amber-800/60 transition-colors cursor-pointer"
+                        className="inline-flex items-center space-x-1.5 px-2.5 py-1 text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300 rounded-lg border border-amber-200 dark:border-amber-800/60 active:scale-[0.98] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                         title="Query strictly this paper in Single Paper Deep Analysis Mode"
+                        aria-label={`Ask Research AI about ${paper.title}`}
                       >
-                        <Sparkles className="w-3 h-3 text-amber-600" />
+                        <Sparkles className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                         <span>Ask Paper</span>
                       </button>
 
                       <button
                         onClick={() => onNavigate('understand', 'analysis', paper.id)}
-                        className="inline-flex items-center space-x-1 px-2.5 py-1 text-[11px] font-medium bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 rounded-md transition-colors cursor-pointer"
+                        className="inline-flex items-center space-x-1.5 px-2.5 py-1 text-[11px] font-semibold bg-zinc-100 hover:bg-zinc-200/80 dark:bg-zinc-800/80 dark:hover:bg-zinc-700/80 text-zinc-800 dark:text-zinc-200 rounded-lg border border-zinc-200/70 dark:border-zinc-700/60 active:scale-[0.98] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-500/20"
+                        title="Inspect structured methodology and benchmarks"
+                        aria-label={`Inspect structured analysis for ${paper.title}`}
                       >
-                        <Layers className="w-3 h-3 text-zinc-500" />
+                        <Layers className="w-3 h-3 text-zinc-500 dark:text-zinc-400" />
                         <span>Analysis</span>
                       </button>
                     </div>
@@ -754,9 +775,10 @@ export const ResearchDashboardOverview: React.FC<ResearchDashboardOverviewProps>
             <div className="pt-2">
               <button
                 onClick={() => onNavigate('understand', 'chat')}
-                className="w-full py-2 px-3 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
+                className="w-full py-2.5 px-3 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 text-xs font-semibold rounded-xl shadow-xs hover:shadow-sm active:scale-[0.98] transition-all flex items-center justify-center space-x-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                aria-label="Open Conversational Research Assistant"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 dark:text-amber-600" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 dark:text-amber-500" />
                 <span>Open Conversational Assistant</span>
               </button>
             </div>

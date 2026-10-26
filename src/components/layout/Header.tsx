@@ -6,7 +6,6 @@ import {
   FolderGit2,
   Sparkles,
   Plus,
-  GraduationCap,
   Power,
   Moon,
   Sun,
@@ -22,7 +21,7 @@ interface HeaderProps {
   projects: ResearchProject[];
   onSelectProject: (id: string) => void;
   onOpenNewProjectModal: () => void;
-  user: User | null;
+  user?: User | null;
   aiAssistanceEnabled?: boolean;
   onToggleAiAssistance?: () => void;
   onOpenChat?: () => void;
@@ -109,7 +108,8 @@ export const Header: React.FC<HeaderProps> = ({
             <select
               value={currentProject?.id || ''}
               onChange={(e) => onSelectProject(e.target.value)}
-              className="text-xs font-medium bg-zinc-100/80 dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-lg pl-8 pr-7 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 max-w-[240px] lg:max-w-[320px] truncate transition-colors appearance-none cursor-pointer"
+              aria-label="Active research project"
+              className="text-xs font-medium bg-zinc-100/90 dark:bg-zinc-900/90 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/80 border border-zinc-200/90 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-lg pl-8 pr-7 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20 max-w-[240px] lg:max-w-[320px] truncate transition-all appearance-none cursor-pointer"
             >
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -122,21 +122,22 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={onOpenNewProjectModal}
-            className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-lg border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 transition-colors"
+            className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-lg border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             title="Create New Research Project"
+            aria-label="Create New Research Project"
           >
             <Plus className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Right: Controls & User Profile */}
-      <div className="flex items-center space-x-2 sm:space-x-3">
+      {/* Right: Actions, AI Status & Theme Toggle */}
+      <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
         {/* Active Research Field Pill */}
-        {currentProject && (
-          <div className="hidden xl:flex items-center space-x-2 text-[11px] font-mono bg-zinc-100/70 dark:bg-zinc-900/60 px-2.5 py-1 rounded-md border border-zinc-200/80 dark:border-zinc-800/80">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span className="text-zinc-600 dark:text-zinc-300 truncate max-w-[180px]">
+        {currentProject?.researchField && (
+          <div className="hidden xl:flex items-center space-x-2 text-[11px] font-mono bg-zinc-100/80 dark:bg-zinc-900/70 px-2.5 py-1 rounded-lg border border-zinc-200/80 dark:border-zinc-800/80">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-zinc-600 dark:text-zinc-300 truncate max-w-[200px]">
               {currentProject.researchField}
             </span>
           </div>
@@ -148,21 +149,22 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={onToggleAiAssistance}
             title={
               aiAssistanceEnabled
-                ? 'AI Assistance Active: Click to pause/disable AI Copilot'
+                ? 'AI Assistance Active: Click to pause AI Copilot'
                 : 'AI Assistance Paused: Click to enable AI Copilot'
             }
-            className={`flex items-center space-x-1.5 px-2.5 py-1 text-xs font-mono rounded-lg border transition-all ${
+            aria-label={`AI Assistance is ${aiAssistanceEnabled ? 'On' : 'Off'}`}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 text-xs font-mono rounded-lg border transition-all cursor-pointer active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
               aiAssistanceEnabled
-                ? 'bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-950/50'
-                : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200/70'
+                ? 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
+                : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200/70 dark:hover:bg-zinc-800/80'
             }`}
           >
             <Power
-              className={`w-3.5 h-3.5 ${
+              className={`w-3.5 h-3.5 transition-colors ${
                 aiAssistanceEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-400'
               }`}
             />
-            <span className="font-semibold text-[11px]">AI: {aiAssistanceEnabled ? 'ON' : 'OFF'}</span>
+            <span className="font-semibold text-[11px] tracking-tight">AI: {aiAssistanceEnabled ? 'ON' : 'OFF'}</span>
           </button>
         )}
 
@@ -170,37 +172,24 @@ export const Header: React.FC<HeaderProps> = ({
         {onOpenChat && (
           <button
             onClick={onOpenChat}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 text-xs font-medium rounded-lg shadow-xs hover:shadow-sm transition-all"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 text-xs font-semibold rounded-lg shadow-xs hover:shadow-sm active:scale-[0.98] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            title="Launch Research AI Copilot"
+            aria-label="Launch Research AI Copilot"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 dark:text-amber-600" />
-            <span className="hidden sm:inline font-semibold">Research AI</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 dark:text-amber-500" />
+            <span className="hidden sm:inline">Research AI</span>
           </button>
         )}
 
         {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-lg border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 transition-colors"
+          className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 rounded-lg border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           aria-label="Toggle theme"
         >
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
-
-        {/* User Badge */}
-        <div className="flex items-center space-x-2 border-l border-zinc-200 dark:border-zinc-800 pl-2.5 sm:pl-3">
-          <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-700 dark:text-zinc-300 font-medium text-xs shadow-2xs">
-            <GraduationCap className="w-3.5 h-3.5" />
-          </div>
-          <div className="hidden sm:block text-left">
-            <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 leading-none">
-              {user?.name || 'Academic Researcher'}
-            </div>
-            <div className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-none mt-0.5 truncate max-w-[130px]">
-              {user?.institution || 'Research Institute'}
-            </div>
-          </div>
-        </div>
       </div>
     </header>
   );

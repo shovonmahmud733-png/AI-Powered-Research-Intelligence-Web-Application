@@ -200,7 +200,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onSelectSubView(sec.stage, item.id);
                       if (onCloseMobile) onCloseMobile();
                     }}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-all text-left group ${
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-all text-left group cursor-pointer active:scale-[0.99] focus:outline-none focus:ring-1 focus:ring-blue-500/20 ${
                       isActive
                         ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 font-semibold shadow-2xs'
                         : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/60 dark:hover:bg-zinc-900/80 font-medium'
@@ -260,7 +260,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Footer System Status */}
       <div className="p-2.5 border-t border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-100/40 dark:bg-zinc-900/40 text-[10px] text-zinc-500 dark:text-zinc-400 font-mono flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>Local Engine Active</span>
         </div>
         <div className="text-zinc-400 dark:text-zinc-500">v1.2-prod</div>
