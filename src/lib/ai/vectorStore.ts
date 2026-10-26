@@ -54,7 +54,7 @@ export class VectorStore {
     // If query contains no informative tokens, only return baseline chunks if explicitly asking for an overview of the paper
     if (queryTokens.length === 0) {
       const qLower = query.toLowerCase().trim();
-      const isOverview = /^(summar|overview|synopsis|tell me about|what is this paper|what does this paper)/i.test(qLower);
+      const isOverview = /^(summar|overview|synopsis|tell me about|what is this paper|what does this paper|what is the paper|what does the paper)/i.test(qLower);
       if (isOverview) {
         return chunks.slice(0, topK).map((c, i) => ({
           chunk: c,
@@ -91,6 +91,7 @@ export class VectorStore {
     const numDocs = chunks.length;
 
     const scored: ScoredChunk[] = chunks.map((chunk, idx) => {
+      const normalizedChunkContent = normalizeExtractedText(chunk.content || '');
       const tokens = chunkTokensList[idx];
       const stems = chunkStemsList[idx];
 
@@ -132,6 +133,8 @@ export class VectorStore {
       const isLimitationQuery = /limitat|threat|constraint|drawback|bottleneck|restrict|weakness/i.test(qLower);
       const isMethodQuery = /method|architecture|model|framework|approach|algorithm|technique|pipeline/i.test(qLower);
       const isResultQuery = /result|evaluat|metric|accuracy|f1|score|finding|outperform|baseline|table/i.test(qLower);
+      const isObjectiveProblemQuery =
+        /objective|aim|goal|problem|contribut|propos|motivat|purpose|tackle|investigat|address|hypothes|question/i.test(qLower);
 
       if (isDatasetQuery) {
         if (/dataset|corpus\s*setup|dataset\s*construct/i.test(sectionLower)) {
@@ -149,6 +152,20 @@ export class VectorStore {
           matchedTokensCount += 3;
         } else {
           tfidfScore = Math.max(0, tfidfScore - 1.5);
+        }
+      } else if (isObjectiveProblemQuery) {
+        if (/intro|problem|objective|aim|goal|motivat|abstract|overview|background|contribut/i.test(sectionLower)) {
+          tfidfScore += 3.5;
+          matchedTokensCount += 3;
+        } else if (/conclu/i.test(sectionLower)) {
+          tfidfScore += 2.0;
+          matchedTokensCount += 2;
+        } else if (/limit|threat/i.test(sectionLower)) {
+          tfidfScore = Math.max(0, tfidfScore - 1.5);
+        }
+        if (/we propose|we investigate|we study|we present|this paper|our contribution|our goal|aims to/i.test(normalizedChunkContent)) {
+          tfidfScore += 2.0;
+          matchedTokensCount += 2;
         }
       } else if (isMethodQuery) {
         if (/method|approach|architect|model|framework|algorithm/i.test(sectionLower)) {
@@ -186,7 +203,6 @@ export class VectorStore {
           : Math.min(0.99, Math.max(0.35, tfidfScore * 5));
 
       // Extract best snippet containing query terms or stems
-      const normalizedChunkContent = normalizeExtractedText(chunk.content || '');
       const sentences = normalizedChunkContent.split(/(?<=[.?!])\s+/);
       let bestSnippet = normalizedChunkContent.substring(0, 220) + '...';
       let maxTermOverlap = 0;
@@ -228,10 +244,29 @@ export class VectorStore {
     );
 
     // If there were query tokens but no matches, check if query was explicitly asking for a summary/overview of the paper itself
-    const overviewKeywords = new Set(['summary', 'summarize', 'overview', 'synopsis']);
+    const overviewKeywords = new Set([
+      'summary',
+      'summarize',
+      'overview',
+      'synopsis',
+      'about',
+      'contribution',
+      'contributions',
+      'objective',
+      'objectives',
+      'problem',
+      'purpose',
+      'aim',
+      'takeaway',
+      'takeaways',
+      'explain',
+    ]);
+    const qLower = query.toLowerCase().trim();
     const isGeneralSummaryQuery =
       queryTokens.some((t) => overviewKeywords.has(t)) ||
-      (queryTokens.length <= 4 && queryTokens.includes('about') && (queryTokens.includes('paper') || queryTokens.includes('study')));
+      /(what is (this|the) paper|what does (this|the) paper|what are the (contributions|objectives|findings|goals)|summar|overview|synopsis|main contribution|key contribution|tell me about|explain this paper)/i.test(
+        qLower
+      );
 
     if (scored.length > 0 && scored[0].score === 0 && isGeneralSummaryQuery) {
       // Elevate the first chunks as baseline context

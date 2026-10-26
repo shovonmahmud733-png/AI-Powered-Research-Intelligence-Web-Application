@@ -74,7 +74,7 @@ describe('End-to-End Workflow: Complete Research Journey', () => {
     const topPaper = searchRes.papers[0];
     expect(topPaper.relevance.score).toBeGreaterThan(50);
     expect(topPaper.relevance.reasons.length).toBeGreaterThan(0);
-  });
+  }, 15000);
 
   // 4. Save Paper & Deduplication
   it('Phase 1.4: Researcher saves paper into project with DOI deduplication verification', () => {

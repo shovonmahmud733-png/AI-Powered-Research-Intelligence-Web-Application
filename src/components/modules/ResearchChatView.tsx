@@ -707,11 +707,18 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
   // Helper to check if a message represents an Insufficient Evidence response
   const isInsufficientEvidenceMessage = (msg: ChatMessage) => {
     if (msg.role !== 'assistant') return false;
+    if (msg.groundingStatus === 'greeting' || msg.groundingStatus === 'general') return false;
+    if (msg.reasonCode === 'GREETING_INTENT' || msg.reasonCode === 'GENERAL_KNOWLEDGE') return false;
+    if (msg.sources && msg.sources.length > 0) return false;
     const lower = msg.content.toLowerCase();
     return (
       lower.includes('insufficient evidence') ||
       lower.includes('no verified documentation') ||
-      (msg.sources && msg.sources.length === 0 && lower.includes('insufficient'))
+      msg.groundingStatus === 'insufficient' ||
+      msg.reasonCode === 'INSUFFICIENT_EVIDENCE' ||
+      msg.reasonCode === 'NO_RELEVANT_CHUNKS' ||
+      msg.reasonCode === 'NO_DOCUMENTS_INDEXED' ||
+      msg.reasonCode === 'CITATION_VALIDATION_FAILED'
     );
   };
 
@@ -1225,8 +1232,21 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                                 <ShieldCheck className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                                 <span>{msg.sources?.length} Verified Citation{msg.sources?.length === 1 ? '' : 's'}</span>
                               </span>
+                            ) : msg.groundingStatus === 'greeting' || msg.reasonCode === 'GREETING_INTENT' ? (
+                              <span className="text-[10px] font-mono uppercase bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 px-2.5 py-0.5 rounded-full font-semibold flex items-center space-x-1">
+                                <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                                <span>Research Copilot Ready</span>
+                              </span>
+                            ) : msg.groundingStatus === 'general' || msg.reasonCode === 'GENERAL_KNOWLEDGE' ? (
+                              <span className="text-[10px] font-mono uppercase bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 px-2.5 py-0.5 rounded-full font-semibold flex items-center space-x-1">
+                                <BookOpen className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                                <span>Foundational Concept</span>
+                              </span>
                             ) : (
-                              <span className="text-[10px] font-mono uppercase bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 px-2.5 py-0.5 rounded-full font-semibold flex items-center space-x-1">
+                              <span
+                                className="text-[10px] font-mono uppercase bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 px-2.5 py-0.5 rounded-full font-semibold flex items-center space-x-1"
+                                title={msg.reasonCode ? `Reason: ${msg.reasonCode}` : undefined}
+                              >
                                 <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                                 <span>Insufficient Grounding</span>
                               </span>
@@ -1241,6 +1261,11 @@ export const ResearchChatView: React.FC<ResearchChatViewProps> = ({
                           <div className="flex items-center space-x-2 font-bold font-mono text-[11px] uppercase tracking-wider">
                             <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                             <span>Insufficient Grounded Evidence in Scope</span>
+                            {msg.reasonCode && (
+                              <span className="text-[9px] bg-amber-100 dark:bg-amber-900/60 border border-amber-300 dark:border-amber-700/60 px-1.5 py-0.5 rounded font-mono font-normal">
+                                {msg.reasonCode}
+                              </span>
+                            )}
                           </div>
                           <p className="text-[11px] leading-relaxed text-amber-800/90 dark:text-amber-400">
                             The available document chunks do not contain verified textual citations to answer this question. Try refining your inquiry with terminology from the paper, or broaden retrieval scope.

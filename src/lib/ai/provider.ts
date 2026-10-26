@@ -260,15 +260,23 @@ You can select a paper from the library or ask any research question to begin!`,
         synthesis = `Insufficient evidence in the selected paper regarding preprocessing techniques.`;
         evidenceList.length = 0;
       }
-    } else if (qLower.includes('problem') || qLower.includes('objective') || qLower.includes('aim') || qLower.includes('goal') || qLower.includes('motivation')) {
+    } else if (
+      qLower.includes('problem') ||
+      qLower.includes('objective') ||
+      qLower.includes('aim') ||
+      qLower.includes('goal') ||
+      qLower.includes('motivation') ||
+      qLower.includes('contribut') ||
+      qLower.includes('purpose')
+    ) {
       const problemChunk = chunks.find((c) =>
-        /problem|objective|aim|goal|motivat|intro|abstract/i.test(c.chunk.sectionName) ||
-        /problem|objective|aim|goal|motivat|we investigate|we study|we propose|address/i.test(c.chunk.content)
+        /problem|objective|aim|goal|motivat|intro|abstract|contribut/i.test(c.chunk.sectionName) ||
+        /problem|objective|aim|goal|motivat|we investigate|we study|we propose|address|contribution|purpose/i.test(c.chunk.content)
       ) || primaryChunk;
       if (problemChunk) {
-        synthesis = `As documented in **${problemChunk.chunk.sectionName}** (Page ${problemChunk.chunk.pageNumber}) of **${paperTitle}**:\n\n> "${problemChunk.chunk.content.substring(0, 320)}..."\n\nThe authors formulate their core research inquiry and objectives as detailed above.`;
+        synthesis = `As documented in **${problemChunk.chunk.sectionName}** (Page ${problemChunk.chunk.pageNumber}) of **${paperTitle}**:\n\n> "${problemChunk.chunk.content.substring(0, 320)}..."\n\nThe authors formulate their core research inquiry, key contributions, and objectives as detailed above.`;
       } else {
-        synthesis = `Insufficient evidence in the selected paper regarding the research problem.`;
+        synthesis = `Insufficient evidence in the selected paper regarding the research problem or contributions.`;
         evidenceList.length = 0;
       }
     } else if (qLower.includes('future') || qLower.includes('next step') || qLower.includes('extension')) {
@@ -282,7 +290,10 @@ You can select a paper from the library or ask any research question to begin!`,
         synthesis = `Insufficient evidence in the selected paper regarding future work recommendations.`;
         evidenceList.length = 0;
       }
-    } else if (primaryChunk.score >= 0.25 || /^(summar|overview|synopsis|tell me about|what is this paper|what does this paper)/i.test(qLower)) {
+    } else if (
+      primaryChunk.score >= 0.25 ||
+      /^(summar|overview|synopsis|tell me about|what is this paper|what does this paper|what is the paper|what does the paper)/i.test(qLower)
+    ) {
       const displayQuery = req.userQuery ? `"${req.userQuery}"` : 'your research inquiry';
       synthesis = `Regarding your inquiry on ${displayQuery}:\n\nDirect evidence from **${primaryChunk.chunk.sectionName}** (Page ${primaryChunk.chunk.pageNumber}) of **${paperTitle}** states:\n\n> "${primaryChunk.chunk.content.substring(0, 320)}..."\n\nThis passage provides the primary grounding for the investigation within the retrieved paper content.`;
     } else {

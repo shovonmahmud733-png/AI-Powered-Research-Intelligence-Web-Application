@@ -299,4 +299,103 @@ describe('Chatbot Regression & Root-Cause Verification Test Suite', () => {
       health.status === 'model_inaccessible'
     ).toBe(true);
   });
+
+  // --------------------------------------------------------------------------
+  // Scenario 13: Core Research Contribution & Objective Queries Retrieve Grounded Evidence
+  // --------------------------------------------------------------------------
+  it('Scenario 13: Queries about contributions and objectives succeed with verified citations and GROUNDED_SUCCESS', async () => {
+    const researchQueries = [
+      'What is the main contribution of the paper?',
+      'What are the key contributions of this study?',
+      'What is the main objective of this study?',
+      'What research problem does this study address?',
+    ];
+
+    for (const q of researchQueries) {
+      const res = await researchChatEngine.generateResponse({
+        projectId: testProjectId,
+        prompt: q,
+        scope: 'project',
+        history: [],
+      });
+
+      expect(res).toBeDefined();
+      expect(res.content.toLowerCase()).not.toContain('insufficient evidence in');
+      expect(res.sources.length).toBeGreaterThan(0);
+      expect(res.groundingStatus).toBe('verified');
+      expect(res.reasonCode).toBe('GROUNDED_SUCCESS');
+      expect(res.diagnosticTrace).toBeDefined();
+      expect(res.diagnosticTrace?.evidenceSufficiencyResult).toBe(true);
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // Scenario 14: Diagnostic Reason Codes for Non-grounded and Informational Paths
+  // --------------------------------------------------------------------------
+  it('Scenario 14: Diagnostic reason codes distinguish greetings, general knowledge, and insufficient evidence', async () => {
+    // 1. Greeting
+    const greetingRes = await researchChatEngine.generateResponse({
+      projectId: testProjectId,
+      prompt: 'Hello Research Copilot',
+      scope: 'project',
+      history: [],
+    });
+    expect(greetingRes.reasonCode).toBe('GREETING_INTENT');
+    expect(greetingRes.groundingStatus).toBe('greeting');
+
+    // 2. General scientific concept
+    const conceptRes = await researchChatEngine.generateResponse({
+      projectId: testProjectId,
+      prompt: 'What is a neural network?',
+      scope: 'project',
+      history: [],
+    });
+    expect(conceptRes.reasonCode).toBe('GENERAL_KNOWLEDGE');
+    expect(conceptRes.groundingStatus).toBe('general');
+
+    // 3. Completely unevidenced query
+    const unevidencedRes = await researchChatEngine.generateResponse({
+      projectId: testProjectId,
+      prompt: 'What quantum annealing temperature was calibrated on the Antarctic D-Wave unit in 1912?',
+      scope: 'paper',
+      paperId: paper1Id,
+      history: [],
+    });
+    expect(unevidencedRes.reasonCode).toBe('INSUFFICIENT_EVIDENCE');
+    expect(unevidencedRes.groundingStatus).toBe('insufficient');
+    expect(unevidencedRes.sources).toHaveLength(0);
+  });
+
+  // --------------------------------------------------------------------------
+  // Scenario 15: API Route Returns groundingStatus and reasonCode
+  // --------------------------------------------------------------------------
+  it('Scenario 15: API routes return groundingStatus and reasonCode in JSON payload', async () => {
+    const session = db.createChatSession({
+      projectId: testProjectId,
+      title: 'Grounding API Test Session',
+      scope: 'project',
+    });
+
+    const req = new Request('http://localhost:3000/api/chat/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: session.id,
+        projectId: testProjectId,
+        content: 'What is the main contribution of the paper?',
+        scope: 'project',
+      }),
+    });
+
+    const res = await messagesPOST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+
+    expect(data.assistantMessage).toBeDefined();
+    expect(data.assistantMessage.groundingStatus).toBe('verified');
+    expect(data.assistantMessage.reasonCode).toBe('GROUNDED_SUCCESS');
+    expect(data.assistantMessage.sources.length).toBeGreaterThan(0);
+    expect(data.reasonCode).toBe('GROUNDED_SUCCESS');
+    expect(data.groundingStatus).toBe('verified');
+  });
 });

@@ -19,12 +19,47 @@ export interface ChatEngineOptions {
   clientChunks?: DocumentChunk[];
 }
 
+export type GroundingReasonCode =
+  | 'NO_DOCUMENTS_INDEXED'
+  | 'NO_RELEVANT_CHUNKS'
+  | 'INSUFFICIENT_EVIDENCE'
+  | 'CITATION_VALIDATION_FAILED'
+  | 'MODEL_REQUEST_FAILED'
+  | 'GROUNDED_SUCCESS'
+  | 'GREETING_INTENT'
+  | 'GENERAL_KNOWLEDGE';
+
+export interface GroundingDiagnosticTrace {
+  queryId: string;
+  scope: 'project' | 'paper' | 'global_library';
+  projectId: string;
+  paperId?: string;
+  indexedDocumentsCount: number;
+  retrievableChunksCount: number;
+  retrievedChunks: Array<{
+    documentId: string;
+    paperId?: string;
+    filename: string;
+    page: number;
+    section: string;
+    similarityScore: number;
+  }>;
+  topSimilarityScore: number;
+  evidenceSufficiencyResult: boolean;
+  reasonCode: GroundingReasonCode;
+  modelExecutionStatus: 'SUCCESS' | 'FAILED' | 'SKIPPED';
+  modelUsed: string;
+}
+
 export interface ChatEngineResult {
   content: string;
   sources: ChatSourceItem[];
   interpretationNotes?: string;
   unverifiedWarnings?: string;
   modelUsed: string;
+  reasonCode?: GroundingReasonCode;
+  groundingStatus?: 'verified' | 'insufficient' | 'general' | 'greeting';
+  diagnosticTrace?: GroundingDiagnosticTrace;
 }
 
 export class ResearchChatEngine {
@@ -38,6 +73,7 @@ export class ResearchChatEngine {
     const scope = options.scope || 'project';
     const searchAcrossLibrary = options.searchAcrossLibrary ?? false;
     const history = options.history || [];
+    const queryId = `qry_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     const isSinglePaper = scope === 'paper' && Boolean(paperId) && !searchAcrossLibrary;
 
@@ -55,10 +91,30 @@ export class ResearchChatEngine {
           'You are Research Copilot, an evidence-grounded academic research partner. Greet the researcher warmly, professionally, and succinctly summarize how you can help them analyze papers, compare methodologies, inspect limitations, and verify claims.',
         history: history.map((h) => ({ role: h.role as 'user' | 'assistant', content: h.content })),
       });
+      const trace: GroundingDiagnosticTrace = {
+        queryId,
+        scope: searchAcrossLibrary ? 'global_library' : isSinglePaper ? 'paper' : 'project',
+        projectId,
+        paperId,
+        indexedDocumentsCount: 0,
+        retrievableChunksCount: 0,
+        retrievedChunks: [],
+        topSimilarityScore: 0,
+        evidenceSufficiencyResult: true,
+        reasonCode: 'GREETING_INTENT',
+        modelExecutionStatus: 'SUCCESS',
+        modelUsed: response.modelUsed,
+      };
+      if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_GROUNDING) {
+        console.log(`=== RESEARCH AI DIAGNOSTIC TRACE [${queryId}] ===\n`, JSON.stringify(trace, null, 2));
+      }
       return {
         content: response.answer,
         sources: [],
         modelUsed: response.modelUsed,
+        reasonCode: 'GREETING_INTENT',
+        groundingStatus: 'greeting',
+        diagnosticTrace: trace,
       };
     }
 
@@ -297,6 +353,9 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
       !isSinglePaper &&
       /^(what is|define|explain|how does)\s+(a\s+|an\s+|the\s+)?(neural network|deep learning|machine learning|artificial intelligence|precision|recall|f1 score|overfitting|gradient descent|transformer|cross[- ]entropy|roc[- ]auc|nlp|natural language processing)/i.test(userMessage.trim());
 
+    const isObjectiveContributionQuery =
+      /objective|aim|goal|problem|contribut|propos|motivat|purpose|tackle|investigat|address|hypothes|question/i.test(qLower);
+
     const isLimitationQuery =
       qLower.includes('limitation') ||
       qLower.includes('limit') ||
@@ -311,11 +370,12 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
       qLower.includes('utterance');
 
     const isOverviewQuery =
-      (qLower.includes('summar') || qLower.includes('overview') || qLower.includes('tell me about')) &&
+      ((qLower.includes('summar') || qLower.includes('overview') || qLower.includes('tell me about')) &&
       !qLower.includes('quantum') &&
       !qLower.includes('temperature') &&
       !qLower.includes('dataset') &&
-      !qLower.includes('method');
+      !qLower.includes('method')) ||
+      /(what is (this|the) paper|what does (this|the) paper|what are the (contributions|objectives|findings|goals)|main contribution|key contribution|explain this paper)/i.test(qLower);
 
     const relevantEvidence = allEvidence.filter((e) => {
       const eText = `${e.claim} ${e.snippet}`.toLowerCase();
@@ -337,7 +397,7 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
 
     validatedChunks.forEach((sc) => {
       // Avoid attaching chunks with zero relevance to the user sources drawer
-      if (sc.score < 0.15 && !isOverviewQuery) return;
+      if (sc.score < 0.15 && !isOverviewQuery && !isObjectiveContributionQuery) return;
 
       const c = sc.chunk;
       const cPaperId = c.paperId || c.paper_id;
@@ -505,6 +565,7 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
     const hasSufficientEvidence =
       (topScore >= 0.15) ||
       relevantEvidence.length > 0 ||
+      (isObjectiveContributionQuery && validatedChunks.length > 0) ||
       (isLimitationQuery && (
         projectMatrix.some((m) => m.limitation) ||
         paperAnalyses.some((a: any) => a?.limitations?.length > 0) ||
@@ -518,9 +579,52 @@ Final context length: ${validatedChunks.reduce((acc, c) => acc + c.chunk.content
       isGeneralConcept;
 
     if (!hasSufficientEvidence) {
+      let failureReasonCode: GroundingReasonCode = 'INSUFFICIENT_EVIDENCE';
+      if (papers.length === 0 && candidateChunks.length === 0) {
+        failureReasonCode = 'NO_DOCUMENTS_INDEXED';
+      } else if (scoredChunks.length === 0) {
+        failureReasonCode = 'NO_RELEVANT_CHUNKS';
+      } else if (validatedChunks.length === 0 && scoredChunks.length > 0) {
+        failureReasonCode = 'CITATION_VALIDATION_FAILED';
+      }
+
       const scopeLabel = isSinglePaper
         ? 'the selected paper'
         : `**${project?.title || 'this project'}**`;
+
+      const trace: GroundingDiagnosticTrace = {
+        queryId,
+        scope: searchAcrossLibrary ? 'global_library' : isSinglePaper ? 'paper' : 'project',
+        projectId,
+        paperId,
+        indexedDocumentsCount: papers.length,
+        retrievableChunksCount: candidateChunks.length,
+        retrievedChunks: validatedChunks.map((vc) => ({
+          documentId: vc.chunk.documentId || vc.chunk.document_id || `doc-${vc.chunk.paperId || vc.chunk.paper_id}`,
+          paperId: vc.chunk.paperId || vc.chunk.paper_id,
+          filename: vc.chunk.sourceFilename || vc.chunk.source_filename || 'document.pdf',
+          page: vc.chunk.pageNumber || 1,
+          section: vc.chunk.sectionName || vc.chunk.section || 'General',
+          similarityScore: Math.round(vc.score * 100),
+        })),
+        topSimilarityScore: Math.round(topScore * 100),
+        evidenceSufficiencyResult: false,
+        reasonCode: failureReasonCode,
+        modelExecutionStatus: 'SKIPPED',
+        modelUsed: 'offline-academic-reasoner-v1',
+      };
+
+      if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_GROUNDING) {
+        console.log(`=== RESEARCH AI GROUNDING DIAGNOSTIC [${queryId}] ===
+Failure Reason: ${failureReasonCode}
+Indexed Papers: ${papers.length}
+Candidate Chunks: ${candidateChunks.length}
+Scored Chunks: ${scoredChunks.length}
+Validated Chunks: ${validatedChunks.length}
+Rejected Chunks: ${rejectedChunks.length}
+${rejectedChunks.length > 0 ? 'Rejection details: ' + rejectedChunks.map((r) => r.reason).join('; ') : 'No chunks rejected'}
+===================================================`);
+      }
 
       return {
         content: `Insufficient evidence in ${scopeLabel}.
@@ -530,6 +634,9 @@ No verified document passages or empirical evidence matching your inquiry were r
 2. Upload the full manuscript PDF using the **Paper Library**.`,
         sources: [], // Zero sources when insufficient evidence
         modelUsed: 'offline-academic-reasoner-v1',
+        reasonCode: failureReasonCode,
+        groundingStatus: 'insufficient',
+        diagnosticTrace: trace,
       };
     }
 
@@ -562,7 +669,7 @@ Active Research Questions:
 ${project?.researchQuestions?.map((q) => `- [${q.status.toUpperCase()}] ${q.question}`).join('\n') || 'None recorded'}
 
 ${recentHistory ? `Conversation History:\n${recentHistory}\n\n---\n\n` : ''}Retrieved Paper Chunks:
-${validatedChunks.filter((c) => c.score >= 0.15 || isOverviewQuery).map((sc) => `[Source: ${papers.find((p) => p.id === (sc.chunk.paperId || sc.chunk.paper_id))?.title || sc.chunk.sourceFilename || 'Paper'} | Page ${sc.chunk.pageNumber} | Section: ${sc.chunk.sectionName || sc.chunk.section}]\n${sc.chunk.content}`).join('\n\n---\n\n')}
+${validatedChunks.filter((c) => c.score >= 0.15 || isOverviewQuery || isObjectiveContributionQuery).map((sc) => `[Source: ${papers.find((p) => p.id === (sc.chunk.paperId || sc.chunk.paper_id))?.title || sc.chunk.sourceFilename || 'Paper'} | Page ${sc.chunk.pageNumber} | Section: ${sc.chunk.sectionName || sc.chunk.section}]\n${sc.chunk.content}`).join('\n\n---\n\n')}
 
 Structured Literature Matrix:
 ${projectMatrix.map((m) => `• [${m.paperTitle}]: Dataset -> ${m.dataset} | Method -> ${m.method} | Result -> ${m.result} | Limitation -> ${m.limitation}`).join('\n')}
@@ -579,17 +686,102 @@ Please formulate an evidence-backed, rigorous research answer citing exact pages
       ? papers.find((p) => p.id === paperId) || db.getPaperById(paperId)
       : (validatedChunks[0] ? papers.find((p) => p.id === (validatedChunks[0].chunk.paperId || validatedChunks[0].chunk.paper_id)) : papers[0]);
 
-    const response = await modelRouter.execute({
-      task: 'research_synthesis',
-      prompt: promptPayload,
-      userQuery: userMessage,
-      systemPrompt,
-      retrievedChunks: validatedChunks.filter((c) => c.score >= 0.15 || isOverviewQuery),
-      paperMetadata: primaryPaper ? { title: primaryPaper.title } : undefined,
-      history: (history || [])
-        .filter((h) => h.content && h.content.trim())
-        .map((h) => ({ role: h.role as 'user' | 'assistant', content: h.content })),
-    });
+    let response;
+    try {
+      response = await modelRouter.execute({
+        task: 'research_synthesis',
+        prompt: promptPayload,
+        userQuery: userMessage,
+        systemPrompt,
+        retrievedChunks: validatedChunks.filter((c) => c.score >= 0.15 || isOverviewQuery || isObjectiveContributionQuery),
+        paperMetadata: primaryPaper ? { title: primaryPaper.title } : undefined,
+        history: (history || [])
+          .filter((h) => h.content && h.content.trim())
+          .map((h) => ({ role: h.role as 'user' | 'assistant', content: h.content })),
+      });
+    } catch (err: any) {
+      console.error(`[RESEARCH CHAT ENGINE] Model execution failed for query ${queryId}:`, err);
+      const trace: GroundingDiagnosticTrace = {
+        queryId,
+        scope: searchAcrossLibrary ? 'global_library' : isSinglePaper ? 'paper' : 'project',
+        projectId,
+        paperId,
+        indexedDocumentsCount: papers.length,
+        retrievableChunksCount: candidateChunks.length,
+        retrievedChunks: validatedChunks.map((vc) => ({
+          documentId: vc.chunk.documentId || vc.chunk.document_id || `doc-${vc.chunk.paperId || vc.chunk.paper_id}`,
+          paperId: vc.chunk.paperId || vc.chunk.paper_id,
+          filename: vc.chunk.sourceFilename || vc.chunk.source_filename || 'document.pdf',
+          page: vc.chunk.pageNumber || 1,
+          section: vc.chunk.sectionName || vc.chunk.section || 'General',
+          similarityScore: Math.round(vc.score * 100),
+        })),
+        topSimilarityScore: Math.round(topScore * 100),
+        evidenceSufficiencyResult: true,
+        reasonCode: 'MODEL_REQUEST_FAILED',
+        modelExecutionStatus: 'FAILED',
+        modelUsed: 'error',
+      };
+      return {
+        content: `An error occurred while communicating with the AI reasoning engine. Please verify the AI configuration or retry your request.`,
+        sources: [],
+        modelUsed: 'error',
+        reasonCode: 'MODEL_REQUEST_FAILED',
+        groundingStatus: 'insufficient',
+        diagnosticTrace: trace,
+      };
+    }
+
+    const groundingStatus: 'verified' | 'insufficient' | 'general' | 'greeting' =
+      sources.length > 0
+        ? 'verified'
+        : isGeneralConcept
+        ? 'general'
+        : 'insufficient';
+
+    const reasonCode: GroundingReasonCode =
+      sources.length > 0
+        ? 'GROUNDED_SUCCESS'
+        : isGeneralConcept
+        ? 'GENERAL_KNOWLEDGE'
+        : 'INSUFFICIENT_EVIDENCE';
+
+    const diagnosticTrace: GroundingDiagnosticTrace = {
+      queryId,
+      scope: searchAcrossLibrary ? 'global_library' : isSinglePaper ? 'paper' : 'project',
+      projectId,
+      paperId,
+      indexedDocumentsCount: papers.length,
+      retrievableChunksCount: candidateChunks.length,
+      retrievedChunks: validatedChunks.map((vc) => ({
+        documentId: vc.chunk.documentId || vc.chunk.document_id || `doc-${vc.chunk.paperId || vc.chunk.paper_id}`,
+        paperId: vc.chunk.paperId || vc.chunk.paper_id,
+        filename: vc.chunk.sourceFilename || vc.chunk.source_filename || 'document.pdf',
+        page: vc.chunk.pageNumber || 1,
+        section: vc.chunk.sectionName || vc.chunk.section || 'General',
+        similarityScore: Math.round(vc.score * 100),
+      })),
+      topSimilarityScore: Math.round(topScore * 100),
+      evidenceSufficiencyResult: true,
+      reasonCode,
+      modelExecutionStatus: 'SUCCESS',
+      modelUsed: response.modelUsed,
+    };
+
+    if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_GROUNDING) {
+      console.log(`=== RESEARCH AI RETRIEVAL DEBUG [${queryId}] ===
+Scope: ${diagnosticTrace.scope}
+Indexed Documents: ${diagnosticTrace.indexedDocumentsCount}
+Retrievable Chunks: ${diagnosticTrace.retrievableChunksCount}
+Top Score: ${diagnosticTrace.topSimilarityScore}%
+Evidence Sufficient: ${diagnosticTrace.evidenceSufficiencyResult}
+Reason Code: ${diagnosticTrace.reasonCode}
+Model Used: ${diagnosticTrace.modelUsed}
+Valid Chunks: ${validatedChunks.length}
+Rejected Chunks: ${rejectedChunks.length}
+${rejectedChunks.length > 0 ? 'Rejection reasons: ' + rejectedChunks.map((r) => r.reason).join('; ') : 'No chunks rejected'}
+===================================`);
+    }
 
     return {
       content: response.answer,
@@ -599,6 +791,9 @@ Please formulate an evidence-backed, rigorous research answer citing exact pages
           ? 'Synthesis grounded in retrieved project document chunks and evidence records. Check the source drawer below for verbatim excerpts and page numbers.'
           : undefined,
       modelUsed: response.modelUsed,
+      reasonCode,
+      groundingStatus,
+      diagnosticTrace,
     };
   }
 }

@@ -128,6 +128,8 @@ export async function POST(req: Request) {
       sources: result.sources,
       interpretationNotes: result.interpretationNotes,
       unverifiedWarnings: result.unverifiedWarnings,
+      groundingStatus: result.groundingStatus,
+      reasonCode: result.reasonCode,
       createdAt: new Date().toISOString(),
     };
     db.addChatMessage(assistantMessage);
@@ -163,6 +165,9 @@ export async function POST(req: Request) {
       userMessage,
       assistantMessage,
       modelUsed: result.modelUsed,
+      reasonCode: result.reasonCode,
+      groundingStatus: result.groundingStatus,
+      diagnosticTrace: result.diagnosticTrace,
     });
   } catch (err: any) {
     console.error('Chat message processing error:', err);

@@ -335,6 +335,8 @@ export interface ChatMessage {
   interpretationNotes?: string;
   unverifiedWarnings?: string;
   createdAt: string;
+  groundingStatus?: 'verified' | 'insufficient' | 'general' | 'greeting';
+  reasonCode?: string;
 }
 
 export interface ChatSession {
