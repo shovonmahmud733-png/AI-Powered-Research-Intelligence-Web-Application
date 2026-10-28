@@ -14,6 +14,10 @@ import {
   Search,
   CheckCircle2,
   ChevronDown,
+  User as UserIcon,
+  LogOut,
+  Settings,
+  LogIn,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -28,6 +32,10 @@ interface HeaderProps {
   onOpenSearch?: () => void;
   isMobileMenuOpen?: boolean;
   onToggleMobileMenu?: () => void;
+  onOpenUserPanel?: () => void;
+  onOpenPreferences?: () => void;
+  onOpenAuthModal?: () => void;
+  onLogout?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -42,8 +50,13 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSearch,
   isMobileMenuOpen = false,
   onToggleMobileMenu,
+  onOpenUserPanel,
+  onOpenPreferences,
+  onOpenAuthModal,
+  onLogout,
 }) => {
   const [isDark, setIsDark] = useState<boolean>(true);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -190,6 +203,103 @@ export const Header: React.FC<HeaderProps> = ({
         >
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
+
+        {/* Researcher User Menu / Authentication Button */}
+        <div className="relative">
+          {user ? (
+            <div className="relative">
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center space-x-2 pl-2 pr-2.5 py-1 rounded-lg border border-zinc-200/90 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-50/80 dark:bg-zinc-900/80 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                aria-label="Researcher profile menu"
+                aria-expanded={isUserMenuOpen}
+              >
+                <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-[11px] font-bold font-mono">
+                  {user.name
+                    ? user.name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .substring(0, 2)
+                        .toUpperCase()
+                    : 'U'}
+                </div>
+                <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 max-w-[100px] truncate hidden sm:inline">
+                  {user.name.split(' ')[0]}
+                </span>
+                <ChevronDown className="w-3 h-3 text-zinc-400" />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isUserMenuOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-64 bg-white dark:bg-[#0f1422] rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl py-2 z-50 text-xs animate-in fade-in"
+                  onBlur={() => setTimeout(() => setIsUserMenuOpen(false), 200)}
+                >
+                  <div className="px-3.5 py-2 border-b border-zinc-100 dark:border-zinc-800/80">
+                    <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                      {user.name}
+                    </p>
+                    <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+                      {user.institution || user.email}
+                    </p>
+                  </div>
+
+                  <div className="py-1">
+                    {onOpenUserPanel && (
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onOpenUserPanel();
+                        }}
+                        className="w-full px-3.5 py-2 text-left text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center space-x-2.5 transition-colors cursor-pointer"
+                      >
+                        <UserIcon className="w-4 h-4 text-blue-500" />
+                        <span>Researcher Workspace</span>
+                      </button>
+                    )}
+
+                    {onOpenPreferences && (
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onOpenPreferences();
+                        }}
+                        className="w-full px-3.5 py-2 text-left text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center space-x-2.5 transition-colors cursor-pointer"
+                      >
+                        <Settings className="w-4 h-4 text-zinc-400" />
+                        <span>Account Preferences</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="border-t border-zinc-100 dark:border-zinc-800/80 pt-1">
+                    {onLogout && (
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onLogout();
+                        }}
+                        className="w-full px-3.5 py-2 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center space-x-2.5 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={onOpenAuthModal}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );

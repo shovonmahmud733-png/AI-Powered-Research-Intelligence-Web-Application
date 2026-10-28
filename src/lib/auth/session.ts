@@ -30,7 +30,26 @@ export function comparePassword(password: string, hash: string): boolean {
   return bcrypt.compareSync(password, hash);
 }
 
-export function getSessionUser(req: Request): User | null {
+export function signPasswordResetToken(payload: TokenPayload): string {
+  return jwt.sign({ ...payload, purpose: 'password_reset' }, JWT_SECRET, { expiresIn: '1h' });
+}
+
+export function verifyPasswordResetToken(token: string): TokenPayload | null {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload & { purpose?: string };
+    if (decoded.purpose !== 'password_reset') return null;
+    return { userId: decoded.userId, email: decoded.email };
+  } catch (err) {
+    return null;
+  }
+}
+
+export function getSessionUser(
+  req: Request,
+  options?: { allowDemoFallback?: boolean }
+): User | null {
+  const allowDemo = options?.allowDemoFallback ?? true;
+
   try {
     // 1. Check Authorization header
     const authHeader = req.headers.get('authorization');
@@ -50,19 +69,38 @@ export function getSessionUser(req: Request): User | null {
     }
 
     if (!token) {
-      // Fallback: If no token provided in demo mode, return the default demo user
-      // so researcher features can be immediately explored without friction
-      return db.getUserById('usr_demo_researcher_01') || null;
+      // If demo fallback permitted, return demo user
+      if (allowDemo) {
+        return db.getUserById('usr_demo_researcher_01') || null;
+      }
+      return null;
     }
 
     const payload = verifyToken(token);
     if (!payload) {
-      return db.getUserById('usr_demo_researcher_01') || null;
+      return null;
     }
 
     const user = db.getUserById(payload.userId);
-    return user || db.getUserById('usr_demo_researcher_01') || null;
+    if (!user) {
+      return {
+        id: payload.userId,
+        name: payload.email.split('@')[0],
+        email: payload.email,
+        passwordHash: '',
+        institution: 'Academic Institution',
+        fieldOfStudy: 'Scientific Research',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    return user;
   } catch (err) {
-    return db.getUserById('usr_demo_researcher_01') || null;
+    return null;
   }
+}
+
+export function getStrictSessionUser(req: Request): User | null {
+  return getSessionUser(req, { allowDemoFallback: false });
 }

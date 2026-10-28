@@ -11,6 +11,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
   }
 
+  const session = db.getChatSessionById(sessionId);
+  if (session) {
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(session.projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Access denied to messages in this session' },
+        { status: 403 }
+      );
+    }
+  }
+
   const messages = db.getChatMessages(sessionId);
   return NextResponse.json({ messages });
 }
@@ -53,6 +64,13 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'sessionId, projectId, and content are required' },
         { status: 400 }
+      );
+    }
+
+    if (!db.isProjectAccessible(projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Access denied to conversations in this project' },
+        { status: 403 }
       );
     }
 

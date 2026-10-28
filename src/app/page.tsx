@@ -29,6 +29,8 @@ import { ResearchMemoryView } from '@/components/modules/ResearchMemoryView';
 import { ResearchFeedAndTrends } from '@/components/modules/ResearchFeedAndTrends';
 import { ResearchNotesView } from '@/components/modules/ResearchNotesView';
 import { ResearchChatView } from '@/components/modules/ResearchChatView';
+import { UserPanel } from '@/components/modules/UserPanel';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 export default function ResearchWorkspacePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -45,6 +47,8 @@ export default function ResearchWorkspacePage() {
   const [aiAssistanceEnabled, setAiAssistanceEnabled] = useState<boolean>(true);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [userPanelTab, setUserPanelTab] = useState<'workspace' | 'projects' | 'library' | 'preferences'>('workspace');
 
   // Stats
   const [projectStats, setProjectStats] = useState<any>(null);
@@ -55,10 +59,25 @@ export default function ResearchWorkspacePage() {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
+      } else {
+        setUser(null);
       }
     } catch (e) {
       console.warn('Auth fetch:', e);
+      setUser(null);
     }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/me', { method: 'POST' });
+    } catch (e) {
+      console.warn('Logout error:', e);
+    }
+    setUser(null);
+    fetchProjects();
+    setStage('overview');
+    setSubView('overview');
   };
 
   const fetchProjects = async () => {
@@ -284,6 +303,18 @@ export default function ResearchWorkspacePage() {
         }}
         isMobileMenuOpen={isMobileMenuOpen}
         onToggleMobileMenu={() => setIsMobileMenuOpen((prev) => !prev)}
+        onOpenUserPanel={() => {
+          setUserPanelTab('workspace');
+          setStage('overview');
+          setSubView('user_panel');
+        }}
+        onOpenPreferences={() => {
+          setUserPanelTab('preferences');
+          setStage('overview');
+          setSubView('user_panel');
+        }}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -338,6 +369,23 @@ export default function ResearchWorkspacePage() {
                 onNavigate={handleNavigate}
                 onOpenNewProject={() => setIsNewProjectModalOpen(true)}
                 onSelectProject={handleSelectProject}
+              />
+            )}
+
+            {/* RESEARCHER USER PANEL & WORKSPACE */}
+            {subView === 'user_panel' && (
+              <UserPanel
+                user={user}
+                projects={projects}
+                currentProject={currentProject}
+                papers={papers}
+                onSelectProject={handleSelectProject}
+                onOpenNewProject={() => setIsNewProjectModalOpen(true)}
+                onNavigate={handleNavigate}
+                onRefreshData={refreshData}
+                onUserUpdated={(updated) => setUser(updated)}
+                onLogout={handleLogout}
+                initialTab={userPanelTab}
               />
             )}
 
@@ -605,6 +653,16 @@ export default function ResearchWorkspacePage() {
         onCreated={(newProj) => {
           setProjects((prev) => [newProj, ...prev]);
           setCurrentProject(newProj);
+        }}
+      />
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSuccess={(authenticatedUser) => {
+          setUser(authenticatedUser);
+          fetchProjects();
         }}
       />
     </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { CitationStyle, formatCitation } from '@/lib/citations/formatters';
+import { getSessionUser } from '@/lib/auth/session';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -8,10 +9,19 @@ export async function GET(req: Request) {
   const projectId = url.searchParams.get('projectId');
   const style = (url.searchParams.get('style') as CitationStyle) || 'apa7';
 
+  const user = getSessionUser(req);
+
   if (paperId) {
     const paper = db.getPaperById(paperId);
     if (!paper) {
       return NextResponse.json({ error: 'Paper not found' }, { status: 404 });
+    }
+
+    if (!db.isProjectAccessible(paper.projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Access denied to citations for this paper' },
+        { status: 403 }
+      );
     }
 
     const citations = {
@@ -28,6 +38,12 @@ export async function GET(req: Request) {
   }
 
   if (projectId) {
+    if (!db.isProjectAccessible(projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Access denied to citations in this project' },
+        { status: 403 }
+      );
+    }
     const papers = db.getPapers(projectId);
     const formatted = papers.map((p) => ({
       paperId: p.id,

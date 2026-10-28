@@ -175,10 +175,58 @@ class DatabaseService {
     return this.data.users[idx];
   }
 
-  // Projects
-  getProjects(userId: string): ResearchProject[] {
+  deleteUser(id: string): boolean {
     this.load();
+    const before = this.data.users.length;
+    this.data.users = this.data.users.filter((u) => u.id !== id);
+    if (this.data.users.length !== before) {
+      // Also delete projects owned by this user
+      const userProjects = this.data.projects.filter((p) => p.userId === id);
+      for (const p of userProjects) {
+        this.deleteProject(p.id);
+      }
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  getUserByResetToken(token: string): User | undefined {
+    this.load();
+    if (!token) return undefined;
+    return this.data.users.find(
+      (u) => u.resetToken === token && (!u.resetTokenExpires || new Date(u.resetTokenExpires) > new Date())
+    );
+  }
+
+  // Projects
+  getProjects(userId?: string): ResearchProject[] {
+    this.load();
+    if (!userId) {
+      return this.data.projects.filter((p) => p.isDemo);
+    }
     return this.data.projects.filter((p) => p.userId === userId || p.isDemo);
+  }
+
+  getUserProjects(userId: string): ResearchProject[] {
+    this.load();
+    return this.data.projects.filter((p) => p.userId === userId);
+  }
+
+  isProjectAccessible(projectId: string, userId?: string): boolean {
+    this.load();
+    const project = this.getProjectById(projectId);
+    if (!project) return true; // Non-existent project returns empty data sets without error
+    if (project.isDemo) return true;
+    return Boolean(userId && project.userId === userId);
+  }
+
+  isProjectOwned(projectId: string, userId?: string): boolean {
+    this.load();
+    if (!userId) return false;
+    const project = this.getProjectById(projectId);
+    if (!project) return false;
+    return project.userId === userId;
   }
 
   getProjectById(id: string): ResearchProject | undefined {
@@ -207,6 +255,21 @@ class DatabaseService {
     const before = this.data.projects.length;
     this.data.projects = this.data.projects.filter((p) => p.id !== id);
     if (this.data.projects.length !== before) {
+      // Cascading cleanup of all project-associated resources
+      const projectPapers = this.data.papers.filter((p) => p.projectId === id);
+      for (const paper of projectPapers) {
+        this.deletePaper(paper.id);
+      }
+      this.data.evidence = this.data.evidence.filter((e) => e.projectId !== id);
+      this.data.gaps = this.data.gaps.filter((g) => g.projectId !== id);
+      this.data.contradictions = this.data.contradictions.filter((c) => c.projectId !== id);
+      this.data.matrix = this.data.matrix.filter((m) => m.projectId !== id);
+      this.data.notes = this.data.notes.filter((n) => n.projectId !== id);
+      this.data.experiments = this.data.experiments.filter((e) => e.projectId !== id);
+      this.data.memory = this.data.memory.filter((m) => m.projectId !== id);
+      this.data.systematicReview = this.data.systematicReview.filter((s) => s.projectId !== id);
+      this.data.chatSessions = this.data.chatSessions.filter((s) => s.projectId !== id);
+      this.data.chatMessages = this.data.chatMessages.filter((m) => m.projectId !== id);
       this.save();
       return true;
     }

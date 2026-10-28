@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { comparePassword, signToken } from '@/lib/auth/session';
+import { db } from '../../../../lib/db';
+import { comparePassword, signToken } from '../../../../lib/auth/session';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
@@ -10,7 +12,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const user = db.getUserByEmail(email);
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = db.getUserByEmail(cleanEmail);
     if (!user) {
       return NextResponse.json({ error: 'Invalid academic credentials' }, { status: 401 });
     }
@@ -30,6 +33,8 @@ export async function POST(req: Request) {
         email: user.email,
         institution: user.institution,
         fieldOfStudy: user.fieldOfStudy,
+        avatarUrl: user.avatarUrl,
+        preferences: user.preferences,
       },
       token,
     });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
 import { Evidence } from '../../../lib/db/types';
+import { getSessionUser } from '../../../lib/auth/session';
 
 export async function GET(req: Request) {
   try {
@@ -15,6 +16,14 @@ export async function GET(req: Request) {
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+    }
+
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Access denied to evidence in this project' },
+        { status: 403 }
+      );
     }
 
     let items: Evidence[] = [];
@@ -124,6 +133,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'projectId and claim are required' }, { status: 400 });
     }
 
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to add evidence to this project' },
+        { status: 403 }
+      );
+    }
+
     const paper = paperId ? db.getPaperById(paperId) : undefined;
     const finalPaperTitle = paper ? paper.title : body.paperTitle || 'External Scholarly Source';
 
@@ -193,6 +210,14 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'Evidence record not found' }, { status: 404 });
     }
 
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(existing.projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to modify evidence in this project' },
+        { status: 403 }
+      );
+    }
+
     // If snippet updated, re-validate fidelity
     if (updates.snippet && updates.snippet !== existing.snippet && existing.paperId) {
       const fidelity = db.validateEvidenceFidelity(existing.paperId, updates.snippet);
@@ -213,6 +238,17 @@ export async function DELETE(req: Request) {
     const id = url.searchParams.get('id');
     if (!id) {
       return NextResponse.json({ error: 'id parameter is required' }, { status: 400 });
+    }
+
+    const existing = db.getEvidenceById(id);
+    if (existing) {
+      const user = getSessionUser(req);
+      if (!db.isProjectAccessible(existing.projectId, user?.id)) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to delete evidence in this project' },
+          { status: 403 }
+        );
+      }
     }
 
     const success = db.deleteEvidence(id);

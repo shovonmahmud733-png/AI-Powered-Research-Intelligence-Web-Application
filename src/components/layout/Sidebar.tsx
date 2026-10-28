@@ -24,11 +24,13 @@ import {
   Activity,
   Layers,
   X,
+  User,
 } from 'lucide-react';
 
 export type WorkflowStage = 'overview' | 'discover' | 'understand' | 'investigate' | 'build' | 'write';
 export type SubView =
   | 'overview'
+  | 'user_panel'
   | 'chat'
   | 'search'
   | 'feed'
@@ -102,6 +104,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           id: 'overview',
           label: 'Command Center',
           icon: LayoutDashboard,
+        },
+        {
+          id: 'user_panel',
+          label: 'Researcher Panel',
+          icon: User,
         },
         {
           id: 'chat',

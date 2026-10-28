@@ -1,12 +1,21 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ResearchMemoryItem } from '@/lib/db/types';
+import { getSessionUser } from '@/lib/auth/session';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const projectId = url.searchParams.get('projectId');
   if (!projectId) {
     return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+  }
+
+  const user = getSessionUser(req);
+  if (!db.isProjectAccessible(projectId, user?.id)) {
+    return NextResponse.json(
+      { error: 'Forbidden: Access denied to research memory in this project' },
+      { status: 403 }
+    );
   }
 
   const memory = db.getMemory(projectId);

@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { MLExperiment } from '@/lib/db/types';
+import { getSessionUser } from '@/lib/auth/session';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const projectId = url.searchParams.get('projectId');
   if (!projectId) {
     return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+  }
+
+  const user = getSessionUser(req);
+  if (!db.isProjectAccessible(projectId, user?.id)) {
+    return NextResponse.json(
+      { error: 'Forbidden: Access denied to experiments in this project' },
+      { status: 403 }
+    );
   }
 
   const experiments = db.getExperiments(projectId);
@@ -20,6 +31,14 @@ export async function POST(req: Request) {
 
     if (!projectId || !name) {
       return NextResponse.json({ error: 'projectId and name are required' }, { status: 400 });
+    }
+
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to log experiments in this project' },
+        { status: 403 }
+      );
     }
 
     const newExperiment: MLExperiment = {
@@ -50,6 +69,17 @@ export async function PUT(req: Request) {
     const { id, ...updates } = body;
     if (!id) {
       return NextResponse.json({ error: 'Experiment id is required' }, { status: 400 });
+    }
+
+    const existing = db.getExperiments('').find(e => e.id === id);
+    if (existing) {
+      const user = getSessionUser(req);
+      if (!db.isProjectAccessible(existing.projectId, user?.id)) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to modify this experiment' },
+          { status: 403 }
+        );
+      }
     }
 
     const updated = db.updateExperiment(id, updates);

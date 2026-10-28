@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { Paper } from '@/lib/db/types';
+import { db } from '../../../lib/db';
+import { Paper } from '../../../lib/db/types';
+import { getSessionUser } from '../../../lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,14 @@ export async function GET(req: Request) {
   const projectId = url.searchParams.get('projectId');
   if (!projectId) {
     return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+  }
+
+  const user = getSessionUser(req);
+  if (!db.isProjectAccessible(projectId, user?.id)) {
+    return NextResponse.json(
+      { error: 'Forbidden: Access denied to papers in this project' },
+      { status: 403 }
+    );
   }
 
   const papers = db.getPapers(projectId);
@@ -29,6 +38,14 @@ export async function POST(req: Request) {
 
     if (!projectId || !title) {
       return NextResponse.json({ error: 'projectId and title are required' }, { status: 400 });
+    }
+
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to add papers to this project' },
+        { status: 403 }
+      );
     }
 
     // Deduplication check: check if paper with same DOI already exists in project
@@ -98,6 +115,17 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Paper ID is required' }, { status: 400 });
     }
     const cleanId = decodeURIComponent(id).trim();
+    const paper = db.getPaperById(cleanId);
+    if (paper) {
+      const user = getSessionUser(req);
+      if (!db.isProjectAccessible(paper.projectId, user?.id)) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to delete this paper' },
+          { status: 403 }
+        );
+      }
+    }
+
     db.deletePaper(cleanId);
     return NextResponse.json(
       { success: true, deletedId: cleanId },

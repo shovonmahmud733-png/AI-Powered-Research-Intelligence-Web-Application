@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { ChatSession } from '@/lib/db/types';
+import { db } from '../../../../lib/db';
+import { ChatSession } from '../../../../lib/db/types';
+import { getSessionUser } from '../../../../lib/auth/session';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const projectId = url.searchParams.get('projectId');
   if (!projectId) {
     return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+  }
+
+  const user = getSessionUser(req);
+  if (!db.isProjectAccessible(projectId, user?.id)) {
+    return NextResponse.json(
+      { error: 'Forbidden: Access denied to conversations in this project' },
+      { status: 403 }
+    );
   }
 
   const sessions = db.getChatSessions(projectId);
@@ -20,6 +31,14 @@ export async function POST(req: Request) {
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+    }
+
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to create chat sessions in this project' },
+        { status: 403 }
+      );
     }
 
     const newSession: ChatSession = {
@@ -49,6 +68,19 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
     }
 
+    const existing = db.getChatSessionById(sessionId);
+    if (!existing) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(existing.projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to modify this session' },
+        { status: 403 }
+      );
+    }
+
     const updates: Partial<ChatSession> = {};
     if (title !== undefined) updates.title = title;
     if (scope !== undefined) updates.scope = scope;
@@ -61,10 +93,6 @@ export async function PATCH(req: Request) {
     }
 
     const updated = db.updateChatSession(sessionId, updates);
-    if (!updated) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-    }
-
     return NextResponse.json({ session: updated });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -76,6 +104,17 @@ export async function DELETE(req: Request) {
   const sessionId = url.searchParams.get('sessionId');
   if (!sessionId) {
     return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
+  }
+
+  const existing = db.getChatSessionById(sessionId);
+  if (existing) {
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(existing.projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to delete this session' },
+        { status: 403 }
+      );
+    }
   }
 
   const success = db.deleteChatSession(sessionId);

@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { getSessionUser } from '@/lib/auth/session';
+import { db } from '../../../lib/db';
+import { getSessionUser } from '../../../lib/auth/session';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const ownedOnly = url.searchParams.get('ownedOnly') === 'true';
+
   const user = getSessionUser(req);
   const userId = user ? user.id : 'usr_demo_researcher_01';
-  const projects = db.getProjects(userId);
+
+  let projects = ownedOnly && user
+    ? db.getUserProjects(userId)
+    : db.getProjects(userId);
 
   // Enrich with stats
   const enriched = projects.map((p) => {
@@ -17,6 +25,7 @@ export async function GET(req: Request) {
 
     return {
       ...p,
+      isOwner: user ? p.userId === user.id : p.isDemo,
       stats: {
         paperCount: papers.length,
         evidenceCount: evidence.length,
@@ -34,19 +43,22 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const user = getSessionUser(req);
-    const userId = user ? user.id : 'usr_demo_researcher_01';
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required to create a project' }, { status: 401 });
+    }
+
     const body = await req.json();
 
-    if (!body.title) {
+    if (!body.title || !String(body.title).trim()) {
       return NextResponse.json({ error: 'Project title is required' }, { status: 400 });
     }
 
     const newProject = db.createProject({
       id: `proj_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      userId,
-      title: body.title,
-      description: body.description || '',
-      researchField: body.researchField || 'Interdisciplinary Sciences',
+      userId: user.id, // Strictly bind to authenticated user session
+      title: body.title.trim(),
+      description: body.description?.trim() || '',
+      researchField: body.researchField?.trim() || 'Interdisciplinary Sciences',
       researchQuestions: Array.isArray(body.researchQuestions)
         ? body.researchQuestions.map((q: any, i: number) => ({
             id: `rq-${Date.now()}-${i}`,
@@ -57,6 +69,7 @@ export async function POST(req: Request) {
         : [],
       objectives: Array.isArray(body.objectives) ? body.objectives : [],
       tags: Array.isArray(body.tags) ? body.tags : [],
+      status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

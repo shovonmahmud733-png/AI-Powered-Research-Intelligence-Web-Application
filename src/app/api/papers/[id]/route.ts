@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getSessionUser } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,14 @@ export async function GET(
   const paper = db.getPaperById(id);
   if (!paper) {
     return NextResponse.json({ error: 'Paper not found' }, { status: 404 });
+  }
+
+  const user = getSessionUser(req);
+  if (!db.isProjectAccessible(paper.projectId, user?.id)) {
+    return NextResponse.json(
+      { error: 'Forbidden: Access denied to this paper' },
+      { status: 403 }
+    );
   }
 
   const analysis = db.getAnalysisByPaper(id);
@@ -35,11 +44,21 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const body = await req.json();
-    const updated = db.updatePaper(id, body);
-    if (!updated) {
+    const paper = db.getPaperById(id);
+    if (!paper) {
       return NextResponse.json({ error: 'Paper not found' }, { status: 404 });
     }
+
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(paper.projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to modify this paper' },
+        { status: 403 }
+      );
+    }
+
+    const body = await req.json();
+    const updated = db.updatePaper(id, body);
     return NextResponse.json({ paper: updated });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -53,6 +72,17 @@ export async function DELETE(
   try {
     const { id } = await params;
     const cleanId = decodeURIComponent(id).trim();
+    const paper = db.getPaperById(cleanId);
+    if (paper) {
+      const user = getSessionUser(req);
+      if (!db.isProjectAccessible(paper.projectId, user?.id)) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to delete this paper' },
+          { status: 403 }
+        );
+      }
+    }
+
     db.deletePaper(cleanId);
     return NextResponse.json(
       { success: true, deletedId: cleanId },

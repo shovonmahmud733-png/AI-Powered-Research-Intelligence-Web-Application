@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { parsePdfBuffer } from '@/lib/pdf/parser';
 import { extractionAgent } from '@/lib/ai/agents';
 import { Paper, DocumentChunk } from '@/lib/db/types';
+import { getSessionUser } from '@/lib/auth/session';
 
 export async function POST(req: Request) {
   try {
@@ -17,6 +18,16 @@ export async function POST(req: Request) {
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+    }
+
+    const user = getSessionUser(req);
+    const userId = user ? user.id : 'usr_demo_researcher_01';
+
+    if (!db.isProjectAccessible(projectId, userId)) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to upload manuscripts to this project' },
+        { status: 403 }
+      );
     }
 
     // 1. Validation
@@ -81,7 +92,6 @@ export async function POST(req: Request) {
 
     // 4. Save Chunks with Mandatory Immutable Document Metadata
     const project = db.getProjectById(projectId);
-    const userId = project?.userId || 'usr_default';
     const documentId = `doc-${paperId}`;
 
     const fullChunks: DocumentChunk[] = parseResult.chunks.map((c, i) => {

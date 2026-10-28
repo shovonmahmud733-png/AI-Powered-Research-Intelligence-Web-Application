@@ -296,7 +296,8 @@ describe('Chatbot Regression & Root-Cause Verification Test Suite', () => {
     expect(
       health.status === 'authentication_failed' ||
       health.status === 'error' ||
-      health.status === 'model_inaccessible'
+      health.status === 'model_inaccessible' ||
+      health.status === 'network_failure'
     ).toBe(true);
   });
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../src/lib/db';
 import { GET } from '../src/app/api/knowledge-graph/route';
+import { signToken } from '../src/lib/auth/session';
 
 describe('QA Suite: Interactive Research Knowledge Graph Explorer', () => {
   const projectId = 'proj_chatgaiya_sentiment_01';
@@ -330,7 +331,10 @@ describe('QA Suite: Interactive Research Knowledge Graph Explorer', () => {
       const dataA = await resA.json();
 
       const altProjectId = 'proj_analysis_mode_01';
-      const reqB = new Request(`http://localhost:3000/api/knowledge-graph?projectId=${altProjectId}`);
+      const tokenB = signToken({ userId: 'usr_researcher_01', email: 'researcher01@lab.edu' });
+      const reqB = new Request(`http://localhost:3000/api/knowledge-graph?projectId=${altProjectId}`, {
+        headers: { Authorization: `Bearer ${tokenB}` },
+      });
       const resB = await GET(reqB);
       const dataB = await resB.json();
 

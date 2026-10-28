@@ -1,12 +1,23 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
 import { LiteratureMatrixRow } from '../../../lib/db/types';
+import { getSessionUser } from '../../../lib/auth/session';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const projectId = url.searchParams.get('projectId');
   if (!projectId) {
     return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+  }
+
+  const user = getSessionUser(req);
+  if (!db.isProjectAccessible(projectId, user?.id)) {
+    return NextResponse.json(
+      { error: 'Forbidden: Access denied to matrix in this project' },
+      { status: 403 }
+    );
   }
 
   const rows = db.getMatrixRows(projectId);
@@ -63,6 +74,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'projectId and paperTitle are required' }, { status: 400 });
     }
 
+    const user = getSessionUser(req);
+    if (!db.isProjectAccessible(projectId, user?.id)) {
+      return NextResponse.json(
+        { error: 'Forbidden: You do not have permission to add matrix rows to this project' },
+        { status: 403 }
+      );
+    }
+
     const newRow: LiteratureMatrixRow = {
       id: body.id || `mat-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       projectId,
@@ -91,6 +110,16 @@ export async function PUT(req: Request) {
     const row = await req.json();
     if (!row.id) {
       return NextResponse.json({ error: 'Row id is required' }, { status: 400 });
+    }
+
+    if (row.projectId) {
+      const user = getSessionUser(req);
+      if (!db.isProjectAccessible(row.projectId, user?.id)) {
+        return NextResponse.json(
+          { error: 'Forbidden: You do not have permission to update matrix rows in this project' },
+          { status: 403 }
+        );
+      }
     }
 
     const saved = db.saveMatrixRow(row);

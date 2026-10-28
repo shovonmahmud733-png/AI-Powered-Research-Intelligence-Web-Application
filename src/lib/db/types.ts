@@ -1,3 +1,13 @@
+export interface UserPreferences {
+  theme?: 'dark' | 'light' | 'system';
+  defaultScope?: 'project' | 'paper';
+  autoSaveNotes?: boolean;
+  citationFormat?: 'apa' | 'ieee' | 'bibtex' | 'harvard';
+  aiAssistanceDefault?: boolean;
+  streamAiResponses?: boolean;
+  confidenceThreshold?: number;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -6,6 +16,9 @@ export interface User {
   institution: string;
   fieldOfStudy: string;
   avatarUrl?: string;
+  preferences?: UserPreferences;
+  resetToken?: string;
+  resetTokenExpires?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +39,7 @@ export interface ResearchProject {
   researchQuestions: ResearchQuestion[];
   objectives: string[];
   tags: string[];
+  status?: 'active' | 'archived';
   createdAt: string;
   updatedAt: string;
   isDemo?: boolean;
